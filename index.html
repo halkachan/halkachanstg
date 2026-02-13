@@ -1816,9 +1816,10 @@ canvas.addEventListener('touchmove', e => {
     if(appState !== 'playing') return;
     e.preventDefault();
     let cx = e.touches[0].clientX, cy = e.touches[0].clientY;
-    let speedMult = isTwoFinger ? 0.4 : 1.0;
-    player.x += (cx - lastTouchX) * speedMult;
-    player.y += (cy - lastTouchY) * speedMult;
+    
+    // 修正: 2本指時の減速(0.4倍)を撤廃し、常に指の動きに追従させる
+    player.x += (cx - lastTouchX);
+    player.y += (cy - lastTouchY);
     
     if (!isTwoFinger) {
         if (Date.now() - touchStartTime < 200 && Math.hypot(cx - touchStartX, cy - touchStartY) > 50) {
