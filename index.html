@@ -308,7 +308,7 @@
         <button class="btn" onclick="openShop()">ASSIMILATE (強化)</button>
         <button class="btn btn-reset" onclick="resetSaveData()">RESET MEMORY</button>
         <div class="instructions" style="position:relative; bottom:0; margin-top:20px;">
-            [スマホ] ドラッグ:移動&連射 | 2本指:ロック&チャージ | フリック:ボム<br>
+            [スマホ] ドラッグ:移動&連射 | 指離す:ホーミング | 2本指タップ:ボム<br>
             [PC] 移動:矢印 | 弾/ロック:Z | ボム:X<br>
             ★上部へ移動するとアイテム自動回収(PoC)
         </div>
@@ -414,7 +414,6 @@ let grazeSparks = [];
 // 入力関連変数
 const keys = {};
 let isTouching = false;
-let isTwoFinger = false;
 let lastTouchX = 0, lastTouchY = 0, touchStartX = 0, touchStartY = 0, touchStartTime = 0;
 
 // 2. Stats & Config Data (初期値)
@@ -670,7 +669,8 @@ class Player {
         this.minions.forEach((m, idx) => m.update(idx)); 
 
         let isShootingInput = keys['KeyZ'] || isTouching;
-        let isChargingInput = keys['KeyZ'] || isTwoFinger;
+        // 修正: 1本指タッチ(isTouching)でもチャージ入力を有効にする
+        let isChargingInput = keys['KeyZ'] || isTouching;
 
         if (isShootingInput) {
             if (isChargingInput) {
@@ -725,7 +725,9 @@ class Player {
             }
         }
 
-        if (!keys['KeyZ'] && this.isCharging && !isTwoFinger) this.releaseCharge();
+        // 修正: 2本指判定(isTwoFinger)ではなく、2本指タッチのイベントで直接リリース処理を行うため、ここでは isTouching のみで判定
+        if (!keys['KeyZ'] && this.isCharging && !isTouching) this.releaseCharge();
+        
         if (this.shotTimer > 0) this.shotTimer--;
         if (this.invincibleTimer > 0) this.invincibleTimer--;
         
@@ -1818,13 +1820,14 @@ canvas.addEventListener('touchstart', e => {
     if (e.touches.length === 1) {
         isTouching = true; isTwoFinger = false;
         touchStartX = lastTouchX; touchStartY = lastTouchY; touchStartTime = Date.now();
-    } else if (e.touches.length >= 2) {
-        isTwoFinger = true;
+    } else if (e.touches.length === 2) {
+        // 2本指タップでボム
+        player.triggerBomb();
     }
 }, { passive: false });
 
 canvas.addEventListener('touchmove', e => {
-    if(appState !== 'playing' || !isTouching) return;
+    if(appState !== 'playing') return; // ここでisTouchingは不要。なぜならtouchmoveはタッチ中しか発生しない
     e.preventDefault();
     
     if (e.touches.length === 0) return;
@@ -1840,13 +1843,6 @@ canvas.addEventListener('touchmove', e => {
         player.y += (cy - lastTouchY);
     }
     
-    if (!isTwoFinger) {
-        if (Date.now() - touchStartTime < 200 && Math.hypot(cx - touchStartX, cy - touchStartY) > 50) {
-            player.triggerBomb();
-            touchStartX = cx; touchStartY = cy; touchStartTime = Date.now(); 
-        }
-    }
-    
     lastTouchX = cx;
     lastTouchY = cy;
 }, { passive: false });
@@ -1858,8 +1854,15 @@ canvas.addEventListener('touchend', e => {
     // 指を離した時も、残った指があればそこに同期
     syncTouchPosition(e);
 
-    if (e.touches.length < 2 && isTwoFinger) { isTwoFinger = false; player.releaseCharge(); }
-    if (e.touches.length === 0) { isTouching = false; player.releaseCharge(); }
+    // isTouching の更新を正しく行う
+    if (e.touches.length === 0) {
+         if (isTouching) { // タッチしていた状態から離した
+             player.releaseCharge();
+         }
+         isTouching = false;
+    }
+    if (e.touches.length < 2) isTwoFinger = false; 
+
 }, { passive: false });
 
 // 7. Initialization
