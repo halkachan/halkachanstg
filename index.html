@@ -1799,13 +1799,24 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => keys[e.code] = false);
 
-// タッチ入力リスナー（復元）
+// タッチ座標同期用関数
+function syncTouchPosition(e) {
+    if (e.touches.length > 0) {
+        lastTouchX = e.touches[0].clientX;
+        lastTouchY = e.touches[0].clientY;
+    }
+}
+
+// タッチ入力リスナー
 canvas.addEventListener('touchstart', e => {
     if(appState !== 'playing') return;
     e.preventDefault();
+    
+    // タッチ開始時、常に指の座標を同期してワープ防止
+    syncTouchPosition(e);
+
     if (e.touches.length === 1) {
         isTouching = true; isTwoFinger = false;
-        lastTouchX = e.touches[0].clientX; lastTouchY = e.touches[0].clientY;
         touchStartX = lastTouchX; touchStartY = lastTouchY; touchStartTime = Date.now();
     } else if (e.touches.length >= 2) {
         isTwoFinger = true;
@@ -1813,13 +1824,21 @@ canvas.addEventListener('touchstart', e => {
 }, { passive: false });
 
 canvas.addEventListener('touchmove', e => {
-    if(appState !== 'playing') return;
+    if(appState !== 'playing' || !isTouching) return;
     e.preventDefault();
-    let cx = e.touches[0].clientX, cy = e.touches[0].clientY;
     
-    // 修正: 2本指時の減速(0.4倍)を撤廃し、常に指の動きに追従させる
-    player.x += (cx - lastTouchX);
-    player.y += (cy - lastTouchY);
+    if (e.touches.length === 0) return;
+
+    let cx = e.touches[0].clientX;
+    let cy = e.touches[0].clientY;
+    
+    // ワープ防止: 前回座標との距離が異常値（100px以上）なら移動をスキップして座標同期のみ
+    let dist = Math.hypot(cx - lastTouchX, cy - lastTouchY);
+    if (dist < 100) { 
+        // 修正: 2本指でも減速せず、指の動きに等速で追従
+        player.x += (cx - lastTouchX);
+        player.y += (cy - lastTouchY);
+    }
     
     if (!isTwoFinger) {
         if (Date.now() - touchStartTime < 200 && Math.hypot(cx - touchStartX, cy - touchStartY) > 50) {
@@ -1827,12 +1846,18 @@ canvas.addEventListener('touchmove', e => {
             touchStartX = cx; touchStartY = cy; touchStartTime = Date.now(); 
         }
     }
-    lastTouchX = cx; lastTouchY = cy;
+    
+    lastTouchX = cx;
+    lastTouchY = cy;
 }, { passive: false });
 
 canvas.addEventListener('touchend', e => {
     if(appState !== 'playing') return;
     e.preventDefault();
+    
+    // 指を離した時も、残った指があればそこに同期
+    syncTouchPosition(e);
+
     if (e.touches.length < 2 && isTwoFinger) { isTwoFinger = false; player.releaseCharge(); }
     if (e.touches.length === 0) { isTouching = false; player.releaseCharge(); }
 }, { passive: false });
