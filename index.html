@@ -198,6 +198,21 @@
             box-shadow: 0 -2px 10px rgba(255, 0, 80, 0.2);
         }
 
+        /* ショップのアイテムリストエリアをスクロール可能にする */
+        #shop-items {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* スクロール設定 */
+            overflow-y: auto;
+            max-height: 55vh; /* 画面高の半分強までに制限 */
+            -webkit-overflow-scrolling: touch; /* iOSでの慣性スクロール */
+            padding-bottom: 20px;
+            /* タッチアクションを許可（スクロール用） */
+            touch-action: pan-y; 
+        }
+
         .shop-item {
             display: flex;
             justify-content: space-between;
@@ -206,6 +221,7 @@
             max-width: 400px;
             border-bottom: 1px dashed #f05;
             padding: 10px 0;
+            flex-shrink: 0; /* 縮小防止 */
         }
         .shop-info {
             text-align: left;
@@ -327,7 +343,7 @@
             <div class="shop-tab" id="tab-unlock" onclick="switchShopTab('unlock')">UNLOCK</div>
         </div>
 
-        <div id="shop-items" style="width:100%; display:flex; flex-direction:column; align-items:center;">
+        <div id="shop-items">
             <!-- JSで動的生成 -->
         </div>
         
@@ -1151,9 +1167,12 @@ class GrazeSpark {
 
 class Explosion {
     constructor(x, y, isBig) {
-        this.x = x; this.y = y; this.radius = 0;
+        this.x = x; this.y = y;
+        this.radius = 0;
         this.maxRadius = isBig ? 80 : 30;
-        this.life = 0; this.maxLife = 20; this.markedForDeletion = false;
+        this.life = 0;
+        this.maxLife = 20;
+        this.markedForDeletion = false;
     }
     update() {
         this.life++;
@@ -1163,7 +1182,9 @@ class Explosion {
     draw(ctx) {
         ctx.globalAlpha = 1 - (this.life / this.maxLife);
         ctx.fillStyle = "#f80";
-        ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
         ctx.globalAlpha = 1.0;
     }
 }
