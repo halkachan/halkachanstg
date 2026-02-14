@@ -19,12 +19,20 @@ html, body {
 
 #game-container {
     position: relative;
-    width: 100%;
+    /* 高さを画面いっぱいに */
     height: 100%;
-    max-width: 500px; /* 少し余裕を持たせる */
-    aspect-ratio: 10 / 16; /* HALKAさん承認済みの比率 */
-    max-height: 100vh; 
-    background: #000;
+    /* 幅は自動調整させるが... */
+    width: 100%;
+    
+    /* 【重要修正】ここで物理的に幅を制限します */
+    /* 画面の高さ(100vh)に対して、10/16 の比率を掛けた値を「最大幅」とする */
+    /* これにより、PCなどの横長画面では確実に左右に黒帯ができ、縦長比率が維持されます */
+    max-width: calc(100vh * 10 / 16);
+    
+    /* 念のためアスペクト比も指定（サポート環境用） */
+    aspect-ratio: 10 / 16;
+    
+    background: #050510;
     overflow: hidden;
     margin: 0 auto;
     box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
