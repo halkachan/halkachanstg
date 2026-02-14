@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ABYSS CORE - HALKA EDITION</title>
-    <!-- スタイルシートの読み込み -->
+    <!-- デザインの読み込み -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body id="body">
@@ -57,11 +57,12 @@
     <!-- ポーズ画面 -->
     <div id="pause-screen" class="overlay-screen hidden">
         <h1 style="color:#fff;">PAUSED</h1>
+        <div style="color:#888; margin-bottom:30px;">SYSTEM SUSPENDED</div>
         <button class="btn" id="btn-resume">RESUME</button>
         <button class="btn" id="btn-abort" style="border-color:#f05; color:#f05; margin-top:20px;">ABORT DIVE</button>
     </div>
 
-    <!-- ステージ確認 -->
+    <!-- ステージ確認モーダル -->
     <div id="stage-confirm-screen" class="overlay-screen hidden">
         <div id="stage-confirm-modal">
             <h2 style="color:#0ff; margin-top:0;">DANGER LEVEL ANALYSIS</h2>
@@ -109,7 +110,7 @@
     </div>
 </div>
 
-<!-- ゲームロジックの読み込み (defer属性でHTML解析後に実行) -->
-<script src="game.js" defer></script>
+<!-- ロジックの読み込み -->
+<script src="game.js"></script>
 </body>
 </html>

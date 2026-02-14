@@ -6,6 +6,7 @@ html, body {
     font-family: 'Courier New', Courier, monospace;
     overflow: hidden;
     touch-action: none;
+    /* スマホでの表示崩れ防止：画面サイズを強制固定 */
     width: 100%;
     height: 100%;
     position: fixed;
@@ -35,8 +36,7 @@ canvas {
     display: none; /* プレイ中のみ表示 */
     z-index: 10;
 }
-
-/* UI Components */
+/* UIレイアウト調整 */
 .ui-top-row {
     display: flex;
     justify-content: space-between;
@@ -45,20 +45,67 @@ canvas {
 .ui-left { text-align: left; }
 .ui-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
 
-/* Status Text */
 #hpDisplay { font-size: 20px; font-weight: bold; color: #f05; }
 #scoreDisplay { font-size: 16px; font-weight: bold; color: #0ff; }
 #playScrapDisplay { font-size: 16px; font-weight: bold; color: #0ff; margin-top: 5px; }
 #bombDisplay { font-size: 16px; font-weight: bold; color: #f00; margin-top: 5px; }
 #powerDisplay { font-size: 16px; font-weight: bold; color: #d0f; margin-top: 5px; }
-#slowDisplay { font-size: 14px; font-weight: bold; color: #0ff; margin-top: 5px; display: none; }
-
-#mentalLabel { font-size: 14px; font-weight: bold; color: #d0f; }
-#mentalGaugeBox { width: 150px; height: 10px; background: #202; border: 1px solid #505; margin-top: 2px; }
-#mentalGaugeBar { width: 0%; height: 100%; background: #d0f; box-shadow: 0 0 10px #f0f; }
+#slowDisplay { font-size: 14px; font-weight: bold; color: #0ff; margin-top: 5px; display:none; }
 #hitDisplay { font-size: 14px; color: #f0f; margin-top: 5px; }
 
-/* Buttons & Interactive Elements */
+#mentalLabel { font-size: 14px; font-weight: bold; color: #d0f; }
+#mentalGaugeBox { width: 150px; height: 10px; background: #202; border: 1px solid #505; margin-top:2px; }
+#mentalGaugeBar { width: 0%; height: 100%; background: #d0f; box-shadow: 0 0 10px #f0f; }
+
+.instructions {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    text-align: center;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.3);
+    pointer-events: none;
+    text-shadow: 0 0 2px #000;
+}
+kbd {
+    background-color: rgba(51, 51, 51, 0.5);
+    padding: 2px 4px;
+    border-radius: 4px;
+    color: #fff;
+}
+
+/* オーバーレイ画面 */
+.overlay-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(10, 0, 5, 0.85);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    transition: opacity 0.3s;
+}
+.hidden {
+    display: none !important;
+}
+h1 {
+    color: #f05;
+    text-shadow: 0 0 10px #f05, 2px 2px 0px #0ff;
+    font-size: 2rem;
+    margin-bottom: 10px;
+    text-align: center;
+}
+.scrap-display {
+    color: #0ff;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-shadow: 0 0 5px #0ff;
+}
 .btn {
     background: rgba(50, 0, 20, 0.8);
     border: 1px solid #f05;
@@ -73,12 +120,29 @@ canvas {
     text-transform: uppercase;
     box-shadow: 0 0 10px rgba(255, 0, 80, 0.3);
     transition: 0.1s;
-    pointer-events: auto; /* Ensure clickable */
 }
-.btn:active { background: #f05; transform: scale(0.95); }
-.btn:disabled { background: #222; border-color: #444; color: #666; cursor: not-allowed; box-shadow: none; }
-.btn-reset { border-color: #444; color: #666; font-size: 0.8rem; padding: 8px 16px; margin-top: 20px; background: transparent; box-shadow: none; }
+.btn:active {
+    background: #f05;
+    transform: scale(0.95);
+}
+.btn:disabled {
+    background: #222;
+    border-color: #444;
+    color: #666;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+.btn-reset {
+    border-color: #444;
+    color: #666;
+    font-size: 0.8rem;
+    padding: 8px 16px;
+    margin-top: 20px;
+    background: transparent;
+    box-shadow: none;
+}
 
+/* ポーズボタン */
 #pause-btn {
     pointer-events: auto;
     background: rgba(0, 0, 0, 0.5);
@@ -91,6 +155,7 @@ canvas {
     font-family: inherit;
 }
 
+/* 発狂ボタン */
 #berserk-btn {
     pointer-events: auto;
     background: rgba(255, 0, 0, 0.2);
@@ -106,7 +171,7 @@ canvas {
     right: 20px;
     width: 80px;
     height: 80px;
-    display: none; /* JS toggles flex */
+    display: none;
     justify-content: center;
     align-items: center;
     text-align: center;
@@ -114,44 +179,11 @@ canvas {
     text-shadow: 0 0 5px #f00;
     z-index: 20;
     line-height: 1.1;
-    -webkit-user-select: none;
     user-select: none;
 }
 #berserk-btn:active { background: rgba(255, 0, 0, 0.5); transform: scale(0.95); }
 
-/* Screens & Overlays */
-.overlay-screen {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(10, 0, 5, 0.85);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 100;
-    transition: opacity 0.3s;
-}
-.hidden { display: none !important; }
-
-h1 {
-    color: #f05;
-    text-shadow: 0 0 10px #f05, 2px 2px 0px #0ff;
-    font-size: 2rem;
-    margin-bottom: 10px;
-    text-align: center;
-}
-.scrap-display {
-    color: #0ff;
-    font-size: 1.2rem;
-    font-weight: bold;
-    margin-bottom: 20px;
-    text-shadow: 0 0 5px #0ff;
-}
-
-/* Stage Select */
+/* ステージ選択グリッド */
 .stage-grid {
     display: flex;
     flex-wrap: wrap;
@@ -171,11 +203,14 @@ h1 {
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    pointer-events: auto;
 }
-.stage-btn.locked { border-color: #333; color: #333; cursor: not-allowed; }
+.stage-btn.locked {
+    border-color: #333;
+    color: #333;
+    cursor: not-allowed;
+}
 
-/* Shop */
+/* ショップリスト */
 .shop-tabs {
     display: flex;
     justify-content: center;
@@ -194,7 +229,6 @@ h1 {
     cursor: pointer;
     font-weight: bold;
     font-size: 0.9rem;
-    pointer-events: auto;
 }
 .shop-tab.active {
     background: rgba(50, 0, 20, 0.8);
@@ -214,6 +248,7 @@ h1 {
     padding-bottom: 20px;
     touch-action: pan-y; 
 }
+
 .shop-item {
     display: flex;
     justify-content: space-between;
@@ -224,12 +259,15 @@ h1 {
     padding: 10px 0;
     flex-shrink: 0; 
 }
-.shop-info { text-align: left; max-width: 65%; }
+.shop-info {
+    text-align: left;
+    max-width: 65%;
+}
 .shop-name { color: #fff; font-weight: bold; font-size: 0.95rem; }
 .shop-desc { color: #888; font-size: 0.75rem; line-height: 1.2; margin-top: 2px; }
 .shop-cost { color: #0ff; font-size: 0.9rem; } 
 
-/* Confirmation Modal */
+/* 確認モーダル */
 #stage-confirm-modal {
     background: rgba(0, 0, 0, 0.95);
     border: 2px solid #f05;
@@ -240,6 +278,7 @@ h1 {
     max-width: 400px;
 }
 
+/* 汚染警告 */
 #pollution-warning {
     position: absolute;
     top: 20%;
@@ -256,7 +295,23 @@ h1 {
     background: rgba(255, 0, 0, 0.1);
 }
 
-/* Animations & Effects */
-.berserk-active canvas { filter: contrast(1.5) sepia(1) hue-rotate(-50deg) saturate(3); }
-.bomb-active canvas { filter: invert(1); }
-.slow-active canvas { box-shadow: inset 0 0 100px rgba(0, 255, 255, 0.3); }
+/* 発狂モード演出用 */
+@keyframes glitch-anim {
+    0% { clip-path: inset(20% 0 80% 0); transform: translate(-2px, 1px); }
+    20% { clip-path: inset(60% 0 10% 0); transform: translate(2px, -1px); }
+    40% { clip-path: inset(40% 0 50% 0); transform: translate(-2px, 2px); }
+    60% { clip-path: inset(80% 0 5% 0); transform: translate(2px, -2px); }
+    80% { clip-path: inset(10% 0 70% 0); transform: translate(-1px, 1px); }
+    100% { clip-path: inset(30% 0 50% 0); transform: translate(1px, -1px); }
+}
+.berserk-active canvas {
+    filter: contrast(1.5) sepia(1) hue-rotate(-50deg) saturate(3);
+}
+/* ボム演出用 */
+.bomb-active canvas {
+    filter: invert(1);
+}
+/* スローモーション演出 */
+.slow-active canvas {
+    box-shadow: inset 0 0 100px rgba(0, 255, 255, 0.3);
+}
