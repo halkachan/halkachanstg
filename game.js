@@ -245,12 +245,8 @@ class Player {
             } else if (isChargingInput) {
                 enemies.forEach(enemy => {
                     if (this.lockedTargets.size < playerStats.maxLocks) {
-                        let dx = enemy.x - this.x;
-                        let dy = enemy.y - (this.y - 150);
-                        if (Math.sqrt(dx*dx + dy*dy) < this.lockOnRadius && enemy.y > 0) {
-                            this.lockedTargets.add(enemy);
-                            enemy.isLocked = true;
-                        }
+                        let dx = enemy.x - this.x; let dy = enemy.y - (this.y - 150);
+                        if (Math.sqrt(dx*dx + dy*dy) < this.lockOnRadius && enemy.y > 0) { this.lockedTargets.add(enemy); enemy.isLocked = true; }
                     }
                 });
             }
@@ -489,7 +485,77 @@ class PowerItem {
     draw(ctx) { ctx.fillStyle = "#d0f"; ctx.shadowBlur = 10; ctx.shadowColor = "#f0f"; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#fff"; ctx.font = "bold 10px Courier New"; ctx.textAlign = "center"; ctx.fillText("P", this.x, this.y + 3); ctx.shadowBlur = 0; }
 }
 
-// 5. Functions & Initialization (Global)
+// 5. Initialize on Load
+window.onload = function() {
+    canvas = document.getElementById('gameCanvas'); // 確実に要素を取得
+    ctx = canvas.getContext('2d');
+    uiLayer = document.getElementById('ui-layer');
+    body = document.getElementById('body');
+
+    // UI Button Listeners Helper
+    function setBtn(id, callback) {
+        const el = document.getElementById(id);
+        if(el) {
+            el.onclick = callback;
+            el.ontouchend = (e) => { e.preventDefault(); callback(); };
+        }
+    }
+    
+    // Set Listeners
+    setBtn('btn-shop', openShop);
+    setBtn('btn-reset', resetSaveData);
+    setBtn('btn-shop-return', openTitle);
+    setBtn('btn-clear-return', openTitle);
+    setBtn('btn-reboot', openTitle);
+    setBtn('btn-resume', togglePause);
+    setBtn('btn-abort', openTitleFromPause);
+    setBtn('btn-cancel-dive', closeConfirm);
+    setBtn('btn-start-dive', startConfirmedGame);
+    
+    // Touch Events on Canvas
+    canvas.addEventListener('touchstart', e => {
+        if(appState !== 'playing') return;
+        e.preventDefault();
+        syncTouchPosition(e);
+        if (e.touches.length === 1) {
+            isTouching = true; 
+            touchStartX = lastTouchX; touchStartY = lastTouchY; touchStartTime = Date.now();
+        } else if (e.touches.length === 2) {
+            player.triggerBomb();
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', e => {
+        if(appState !== 'playing') return;
+        e.preventDefault();
+        if (e.touches.length === 0) return;
+        let cx = e.touches[0].clientX;
+        let cy = e.touches[0].clientY;
+        let dist = Math.hypot(cx - lastTouchX, cy - lastTouchY);
+        if (dist < 100) { 
+            player.x += (cx - lastTouchX);
+            player.y += (cy - lastTouchY);
+        }
+        lastTouchX = cx;
+        lastTouchY = cy;
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', e => {
+        if(appState !== 'playing') return;
+        e.preventDefault();
+        syncTouchPosition(e);
+        if (e.touches.length === 0) {
+             if (isTouching) player.releaseCharge();
+             isTouching = false;
+        }
+    }, { passive: false });
+
+    resizeCanvas();
+    player = new Player();
+    openTitle();
+    gameLoop();
+};
+
 function saveGameData() {
     const data = { totalScrap, maxUnlockedLevel, playerStats, playerUnlocks };
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) {}
@@ -516,9 +582,11 @@ function resetSaveData() {
 }
 
 function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    if(player && player.y > canvas.height) player.y = canvas.height - 100;
+    if(canvas) {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        if(player && player.y > canvas.height) player.y = canvas.height - 100;
+    }
 }
 
 function switchShopTab(tab) {
@@ -624,7 +692,6 @@ function triggerStageClear() {
 
 function triggerGameOver() {
     appState = 'gameover';
-    
     if (playerUnlocks.midasCurse && !player.usedMidas) {
         if (totalScrap >= 100) { 
              if(confirm("黄金の呪いが発動しますか？ (所持金の半分を消費して復活)")) {
@@ -640,7 +707,6 @@ function triggerGameOver() {
              }
         }
     }
-
     totalScrap += collectedScrapInRun;
     saveGameData(); 
     hideAllScreens();
@@ -676,7 +742,15 @@ function renderStageGrid() {
         let btn = document.createElement('div');
         btn.className = 'stage-btn' + (i > maxUnlockedLevel ? ' locked' : '');
         btn.innerText = i;
-        if(i <= maxUnlockedLevel) btn.onclick = () => showStageConfirm(i);
+        
+        if(i <= maxUnlockedLevel) {
+            // クリックとタッチ両方に対応 (確実に反応させるため)
+            btn.onclick = function() { showStageConfirm(i); };
+            btn.ontouchend = function(e) { 
+                e.preventDefault(); 
+                showStageConfirm(i); 
+            };
+        }
         grid.appendChild(btn);
     }
 }
@@ -718,8 +792,19 @@ function renderShop() {
                 ${item.desc ? `<div class="shop-desc">${item.desc}</div>` : ''}
                 <div class="shop-cost">${isUnlocked ? '---' : `REQ: ${cost} SCRAP`}</div>
             </div>
-            <button class="btn" style="width:auto; margin:0;" ${(totalScrap < cost && !buttonDisabled) || buttonDisabled ? 'disabled' : ''} onclick="buyUpgrade('${key}')">${buttonText}</button>
         `;
+        // ボタン生成 (ontouchendも追加)
+        let btn = document.createElement('button');
+        btn.className = 'btn';
+        btn.style.width = 'auto';
+        btn.style.margin = '0';
+        btn.innerText = buttonText;
+        if ((totalScrap < cost && !buttonDisabled) || buttonDisabled) btn.disabled = true;
+        
+        btn.onclick = function() { buyUpgrade(key); };
+        btn.ontouchend = function(e) { e.preventDefault(); buyUpgrade(key); };
+
+        div.appendChild(btn);
         list.appendChild(div);
     }
 }
@@ -831,9 +916,7 @@ function updateGame() {
     if (playerUnlocks.adrenalineBurst) {
         let nearby = false;
         for (let eb of enemyBullets) {
-            if (checkDistance(player, eb) < player.grazeRadius + 10) { 
-                nearby = true; break;
-            }
+            if (checkDistance(player, eb) < player.grazeRadius + 10) { nearby = true; break; }
         }
         if (nearby) gameSpeed = 0.5;
     }
@@ -1044,58 +1127,6 @@ function updateGame() {
     grazeSparks = grazeSparks.filter(gs => gs.life > 0);
 }
 
-function drawGame(ctx) {
-    // 共通描画処理
-    scraps.forEach(s => s.draw(ctx));
-    powerItems.forEach(pi => pi.draw(ctx));
-    grazeSparks.forEach(gs => gs.draw(ctx));
-    playerBullets.forEach(pb => pb.draw(ctx));
-    enemyBullets.forEach(eb => eb.draw(ctx));
-    enemies.forEach(e => e.draw(ctx));
-    player.draw(ctx);
-    explosions.forEach(exp => exp.draw(ctx));
-    
-    // UI
-    if (!bossSpawned) {
-        let gH = canvas.height * 0.5, gY = canvas.height * 0.25, gX = canvas.width - 15;
-        ctx.fillStyle = "rgba(50, 50, 50, 0.5)"; ctx.fillRect(gX, gY, 4, gH);
-        let p = currentDistance / totalDistance, fH = gH * p;
-        ctx.fillStyle = `rgb(${Math.floor(255 * p)}, ${Math.floor(255 * (1 - p))}, 0)`;
-        ctx.fillRect(gX - 2, gY + gH - fH, 8, fH);
-        ctx.fillStyle = "#fff"; ctx.fillRect(gX - 4, gY + gH - fH - 2, 12, 4);
-        ctx.fillStyle = "#f00"; ctx.fillRect(gX - 4, gY - 4, 12, 4);
-    } else if (bossObj && !bossObj.markedForDeletion) {
-        let hpR = Math.max(0, bossObj.hp / bossObj.maxHp);
-        ctx.fillStyle = "rgba(50, 0, 0, 0.8)"; ctx.fillRect(50, 40, canvas.width - 100, 10);
-        ctx.fillStyle = hpR > 0.3 ? "#f00" : "#ff0"; ctx.fillRect(50, 40, (canvas.width - 100) * hpR, 10);
-        ctx.fillStyle = "#fff"; ctx.font = "bold 14px 'Courier New'"; ctx.textAlign = "center";
-        ctx.fillText(`Lv.${currentLevel} UNKNOWN ENTITY`, canvas.width / 2, 35);
-        ctx.textAlign = "left";
-    }
-}
-
-// 6. Setup Listeners & Start
-window.onload = function() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    player = new Player();
-    
-    // UI Button Listeners
-    document.getElementById('btn-shop').onclick = openShop;
-    document.getElementById('btn-reset').onclick = resetSaveData;
-    document.getElementById('btn-shop-return').onclick = openTitle;
-    document.getElementById('btn-clear-return').onclick = openTitle;
-    document.getElementById('btn-reboot').onclick = openTitle;
-    document.getElementById('btn-resume').onclick = togglePause;
-    document.getElementById('btn-abort').onclick = openTitleFromPause;
-    document.getElementById('btn-cancel-dive').onclick = closeConfirm;
-    document.getElementById('btn-start-dive').onclick = startConfirmedGame;
-    
-    // Game Start
-    openTitle();
-    gameLoop();
-};
-
 // 6. Event Listeners
 window.addEventListener('resize', resizeCanvas);
 
@@ -1112,57 +1143,3 @@ function syncTouchPosition(e) {
         lastTouchY = e.touches[0].clientY;
     }
 }
-
-// タッチ入力リスナー
-canvas.addEventListener('touchstart', e => {
-    if(appState !== 'playing') return;
-    e.preventDefault();
-    
-    syncTouchPosition(e);
-
-    if (e.touches.length === 1) {
-        isTouching = true; 
-        touchStartX = lastTouchX; touchStartY = lastTouchY; touchStartTime = Date.now();
-    } else if (e.touches.length === 2) {
-        // 2本指タップでボム
-        player.triggerBomb();
-    }
-}, { passive: false });
-
-canvas.addEventListener('touchmove', e => {
-    if(appState !== 'playing') return;
-    e.preventDefault();
-    
-    if (e.touches.length === 0) return;
-
-    let cx = e.touches[0].clientX;
-    let cy = e.touches[0].clientY;
-    
-    let dist = Math.hypot(cx - lastTouchX, cy - lastTouchY);
-    if (dist < 100) { 
-        player.x += (cx - lastTouchX);
-        player.y += (cy - lastTouchY);
-    }
-    
-    lastTouchX = cx;
-    lastTouchY = cy;
-}, { passive: false });
-
-canvas.addEventListener('touchend', e => {
-    if(appState !== 'playing') return;
-    e.preventDefault();
-    
-    syncTouchPosition(e);
-
-    if (e.touches.length === 0) {
-         if (isTouching) { 
-             player.releaseCharge();
-         }
-         isTouching = false;
-    }
-
-}, { passive: false });
-
-</script>
-</body>
-</html>
