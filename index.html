@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ABYSS CORE - HALKA EDITION</title>
-    <!-- デザインの読み込み -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body id="body">
@@ -12,7 +11,7 @@
 <div id="game-container">
     <canvas id="gameCanvas"></canvas>
     
-    <!-- プレイ中UI -->
+    <!-- UI Layer -->
     <div id="ui-layer">
         <div id="pollution-warning">WARNING: AREA POLLUTION</div>
         <div class="ui-top-row">
@@ -33,18 +32,15 @@
                 <div id="hitDisplay">HITS: 0</div>
             </div>
         </div>
-        <!-- 発狂ボタン -->
         <div id="berserk-btn">GO<br>BERSERK</div>
     </div>
     
-    <!-- TOP画面 -->
+    <!-- Title Screen -->
     <div id="title-screen" class="overlay-screen">
         <h1>ABYSS CORE</h1>
         <div class="scrap-display" id="title-scrap">SCRAP: 0</div>
-        
         <div style="color:#0ff; margin-bottom: 10px;">SELECT DIVE LEVEL</div>
         <div class="stage-grid" id="stage-grid"></div>
-        
         <button class="btn" id="btn-shop">ASSIMILATE (強化)</button>
         <button class="btn btn-reset" id="btn-reset">RESET MEMORY</button>
         <div class="instructions" style="position:relative; bottom:0; margin-top:20px;">
@@ -54,23 +50,19 @@
         </div>
     </div>
 
-    <!-- ポーズ画面 -->
+    <!-- Pause Screen -->
     <div id="pause-screen" class="overlay-screen hidden">
         <h1 style="color:#fff;">PAUSED</h1>
-        <div style="color:#888; margin-bottom:30px;">SYSTEM SUSPENDED</div>
         <button class="btn" id="btn-resume">RESUME</button>
         <button class="btn" id="btn-abort" style="border-color:#f05; color:#f05; margin-top:20px;">ABORT DIVE</button>
     </div>
 
-    <!-- ステージ確認モーダル -->
+    <!-- Stage Confirm -->
     <div id="stage-confirm-screen" class="overlay-screen hidden">
         <div id="stage-confirm-modal">
             <h2 style="color:#0ff; margin-top:0;">DANGER LEVEL ANALYSIS</h2>
             <div id="confirm-level" style="font-size:1.5rem; color:#fff; margin-bottom:10px;">LEVEL 1</div>
             <div id="confirm-enemy-count" style="font-size:1.2rem; color:#f05; margin-bottom:20px;">ENEMY SIGNAL: ???</div>
-            <div style="color:#888; font-size:0.9rem; margin-bottom:20px;">
-                Deeper levels yield more SCRAP but increase mental corruption risk.
-            </div>
             <div style="display:flex; justify-content:center; gap:10px;">
                 <button class="btn" id="btn-cancel-dive" style="border-color:#888; color:#888;">CANCEL</button>
                 <button class="btn" id="btn-start-dive">DIVE</button>
@@ -78,23 +70,21 @@
         </div>
     </div>
 
-    <!-- 強化画面 -->
+    <!-- Shop -->
     <div id="shop-screen" class="overlay-screen hidden">
         <h1 style="color:#0ff;">ASSIMILATION</h1>
         <div class="scrap-display" id="shop-scrap">SCRAP: 0</div>
-        
         <div class="shop-tabs">
             <div class="shop-tab active" id="tab-stat">ENHANCE</div>
             <div class="shop-tab" id="tab-unlock">UNLOCK</div>
-            <div class="shop-tab" id="tab-module" style="color:#f05; border-color:#f05;">MODULE</div>
+            <!-- style属性を削除しIDのみで管理 -->
+            <div class="shop-tab" id="tab-module">MODULE</div>
         </div>
-
         <div id="shop-items"></div>
-        
         <button class="btn" id="btn-shop-return" style="margin-top: 30px; border-color:#888; color:#888;">RETURN</button>
     </div>
 
-    <!-- クリア画面 -->
+    <!-- Result Screens -->
     <div id="clear-screen" class="overlay-screen hidden">
         <h1 style="color:#0f0;">TARGET DESTROYED</h1>
         <div style="color:#fff; margin-bottom:10px;" id="clear-stats"></div>
@@ -102,7 +92,6 @@
         <button class="btn" id="btn-clear-return">RETURN TO BASE</button>
     </div>
 
-    <!-- ゲームオーバー画面 -->
     <div id="gameover-screen" class="overlay-screen hidden">
         <h1>GAME OVER</h1>
         <div style="color:#fff; margin-bottom:10px;">――もう、動けないよ……</div>
@@ -111,7 +100,6 @@
     </div>
 </div>
 
-<!-- 分割したスクリプトを正しい順序で読み込む -->
 <script src="config.js"></script>
 <script src="classes.js"></script>
 <script src="game.js"></script>

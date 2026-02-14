@@ -11,22 +11,25 @@ html, body {
     position: fixed;
     top: 0;
     left: 0;
+    /* ゲームコンテナを中央に配置 */
     display: flex;
     justify-content: center;
     align-items: center;
-    background: #000;
+    background: #000; /* 余白は黒 */
 }
 
+/* ゲーム画面コンテナ修正: アスペクト比を最優先 */
 #game-container {
     position: relative;
-    width: 100%;
-    height: 100%;
-    max-width: 480px; 
-    aspect-ratio: 9 / 16; /* iPhoneライクな比率 */
-    max-height: 100vh; 
-    background: #000;
+    /* 高さを画面いっぱいにするが、アスペクト比9:16を超えて幅が広がるのを防ぐ */
+    height: 100vh; 
+    width: auto; 
+    aspect-ratio: 9 / 16;
+    max-width: 100vw; /* 横長画面で高さが余る場合の保険 */
+    
+    background: #050510;
     overflow: hidden;
-    margin: 0 auto;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.8); /* 浮き上がり効果 */
 }
 
 canvas {
@@ -220,11 +223,25 @@ h1 {
     font-weight: bold;
     font-size: 0.9rem;
     pointer-events: auto;
+    transition: 0.2s;
 }
+/* アクティブ時の共通スタイル */
 .shop-tab.active {
     background: rgba(50, 0, 20, 0.8);
     border-color: #f05;
     color: #fff;
+    box-shadow: 0 -2px 10px rgba(255, 0, 80, 0.2);
+}
+
+/* MODULEタブの特別色（非アクティブ時は少し暗い赤、アクティブ時は強烈な赤） */
+#tab-module {
+    color: #844; /* 非選択時は暗い赤文字 */
+    border-color: #422; /* 枠も暗く */
+}
+#tab-module.active {
+    background: rgba(80, 0, 30, 0.8);
+    border-color: #f05;
+    color: #f05; /* アクティブ時はネオンピンク */
     box-shadow: 0 -2px 10px rgba(255, 0, 80, 0.2);
 }
 
@@ -255,7 +272,17 @@ h1 {
 .shop-desc { color: #888; font-size: 0.75rem; line-height: 1.2; margin-top: 2px; }
 .shop-cost { color: #0ff; font-size: 0.9rem; } 
 
-/* Pollution Warning */
+/* Confirmation Modal */
+#stage-confirm-modal {
+    background: rgba(0, 0, 0, 0.95);
+    border: 2px solid #f05;
+    padding: 20px;
+    text-align: center;
+    z-index: 200;
+    width: 80%;
+    max-width: 400px;
+}
+
 #pollution-warning {
     position: absolute;
     top: 20%;
@@ -272,6 +299,7 @@ h1 {
     background: rgba(255, 0, 0, 0.1);
 }
 
+/* Animations & Effects */
 .berserk-active canvas { filter: contrast(1.5) sepia(1) hue-rotate(-50deg) saturate(3); }
 .bomb-active canvas { filter: invert(1); }
 .slow-active canvas { box-shadow: inset 0 0 100px rgba(0, 255, 255, 0.3); }
