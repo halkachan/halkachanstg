@@ -132,9 +132,11 @@ function getCanvasRelativeCoords(e) {
     const rect = canvas.getBoundingClientRect();
     let clientX = e.touches ? e.touches[0].clientX : e.clientX;
     let clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    // Canvasの内部解像度と表示サイズの比率を計算
+    
+    // 修正: 表示サイズと内部解像度からスケールを計算（歪み防止）
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
+    
     return {
         x: (clientX - rect.left) * scaleX,
         y: (clientY - rect.top) * scaleY
@@ -175,20 +177,14 @@ function resetSaveData() {
 }
 
 function resizeCanvas() {
-    if (!canvas) return;
-    const windowRatio = window.innerWidth / window.innerHeight;
-    const targetRatio = 10 / 16; 
+    const container = document.getElementById('game-container');
+    if (!container || !canvas) return;
     
-    if (windowRatio > targetRatio) {
-        // 横長画面 (PC等)
-        canvas.height = window.innerHeight;
-        canvas.width = canvas.height * targetRatio;
-    } else {
-        // 縦長画面 (スマホ等)
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    }
-    
+    // 修正: コンテナの表示サイズ(CSSで制御)をそのままCanvasの解像度にする
+    // これにより、CSSのアスペクト比とCanvasの描画比率が完全に一致し、歪みが消える
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+
     // 自機が画面外に行かないように補正
     if(player && player.y > canvas.height) player.y = canvas.height - 100;
 }
@@ -266,10 +262,14 @@ function startGame(level) {
     if(uiLayer) uiLayer.style.display = 'block';
     
     // Player Re-initialization
+    // プレイヤーがいない場合、または再開時に必ず中央下へ配置
     if (!player) player = new Player();
     player.hp = playerStats.maxHp;
+    
+    // 修正: Canvasサイズが変わっている可能性があるため、開始時に位置を強制リセット
     player.x = canvas.width / 2;
     player.y = canvas.height - 100;
+    
     player.chargeAmount = 0; player.isCharging = false; player.lockedTargets.clear();
     player.invincibleTimer = 60; 
     player.lockOnRadius = (120 + (playerStats.maxLocks * 5)) * playerStats.lockRange;
@@ -597,7 +597,10 @@ class Player {
         if (!playerUnlocks.guillotineField) return;
         if (this.shieldHp < this.shieldMax) {
             this.shieldRecoverTimer++;
-            if (this.shieldRecoverTimer > 300) { this.shieldHp++; this.shieldRecoverTimer = 0; }
+            if (this.shieldRecoverTimer > 300) { 
+                this.shieldHp++; 
+                this.shieldRecoverTimer = 0; 
+            }
         }
     }
 
@@ -608,6 +611,7 @@ class Player {
                     playerBullets.push(new HomingBullet(this.x, this.y, target, this.powerLevel >= 2));
                 });
             } else {
+                // 非ロックオンチャージ: 非貫通
                 playerBullets.push(new PlayerBullet(this.x, this.y - 20, 0, -20, true, this.powerLevel >= 2, null, false, false)); 
             }
         }
@@ -727,6 +731,7 @@ class Player {
                 if (item instanceof Scrap) {
                     collectedScrapInRun += item.value;
                     totalScrap += item.value;
+                    document.getElementById('playScrapDisplay').innerText = `SCRAP: ${Math.floor(collectedScrapInRun)}`;
                 } else if (item instanceof PowerItem) {
                     this.powerLevel = Math.min(2, this.powerLevel + 1);
                     grazeSparks.push(new GrazeSpark(this.x, this.y, true));
@@ -983,226 +988,8 @@ class PowerItem {
     draw(ctx) { ctx.fillStyle = "#d0f"; ctx.shadowBlur = 10; ctx.shadowColor = "#f0f"; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#fff"; ctx.font = "bold 10px Courier New"; ctx.textAlign = "center"; ctx.fillText("P", this.x, this.y + 3); ctx.shadowBlur = 0; }
 }
 
-// 5. Functions (Global Scope)
-function checkCollision(obj1, obj2, margin = 0) {
-    let dx = obj1.x - obj2.x; let dy = obj1.y - obj2.y;
-    return Math.sqrt(dx*dx + dy*dy) < (obj1.radius + obj2.radius + margin);
-}
-
-function checkDistance(obj1, obj2) {
-    let dx = obj1.x - obj2.x; let dy = obj1.y - obj2.y;
-    return Math.sqrt(dx*dx + dy*dy);
-}
-
-function addHitScore() {
-    currentHits++; comboTimer = 60;
-    let bonus = Math.min(currentHits, 10);
-    score += 100 * bonus;
-    let hd = document.getElementById('hitDisplay');
-    if (hd) {
-        hd.innerText = `HITS: ${currentHits} (x${bonus})`;
-        hd.style.color = currentHits > 5 ? "#ff0" : "#f0f";
-    }
-}
-
-function gameLoop() {
-    if (appState === 'paused') { drawGame(ctx); requestAnimationFrame(gameLoop); return; }
-    
-    // Safety check for ctx
-    if (!ctx) return;
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    frameCount++;
-
-    // Background
-    ctx.fillStyle = (player && player.isBerserk) ? "rgba(50, 0, 0, 0.5)" : "rgba(255, 255, 255, 0.5)"; 
-    let speedScroll = appState === 'playing' ? ((player && player.isBerserk) ? 2.0 : 0.5) : 0.1;
-    for(let i=0; i<5; i++) {
-        let starY = (frameCount * (i+1) * speedScroll) % canvas.height;
-        ctx.fillRect((i * 100 + frameCount * (appState==='playing'?1:0.2)) % canvas.width, starY, 2, 2);
-    }
-
-    if (appState === 'playing') {
-        updateGame();
-        drawGame(ctx);
-        updatePlayingUI();
-    } else if (appState === 'clear' || appState === 'gameover') {
-        drawGame(ctx);
-    }
-
-    requestAnimationFrame(gameLoop);
-}
-
-function updateGame() {
-    if (!player) return;
-
-    gameSpeed = 1.0;
-    if (playerUnlocks.adrenalineBurst) {
-        let nearby = false;
-        for (let eb of enemyBullets) { if (checkDistance(player, eb) < player.grazeRadius + 10) { nearby = true; break; } }
-        if (nearby) gameSpeed = 0.5;
-    }
-
-    if (!bossSpawned) {
-        currentDistance += (player.isBerserk ? 4 : 2) * gameSpeed;
-        let baseSpawnRate = 90 / Math.pow(1.5, currentLevel - 1);
-        baseSpawnRate = Math.max(10, baseSpawnRate); 
-        if (player.isBerserk) baseSpawnRate = Math.max(5, baseSpawnRate / 2); 
-        let finalSpawnRate = Math.floor(baseSpawnRate / gameSpeed);
-        if (finalSpawnRate < 1) finalSpawnRate = 1;
-
-        if (frameCount % finalSpawnRate === 0) {
-            let rand = Math.random(); let type = 'normal';
-            if (rand < 0.35) type = 'normal'; else if (rand < 0.55) type = 'rusher'; else if (rand < 0.75) type = 'sprinkler'; else if (rand < 0.95) type = 'sniper'; else type = 'carrier'; 
-            let spawnX, spawnY;
-            if (Math.random() < 0.8) { spawnX = Math.random() * (canvas.width - 40) + 20; spawnY = -20; } 
-            else { spawnX = Math.random() < 0.5 ? -20 : canvas.width + 20; spawnY = Math.random() * (canvas.height * 0.5); }
-            if (spawnY > 0 && type !== 'rusher' && type !== 'sprinkler') { type = Math.random() < 0.5 ? 'rusher' : 'sprinkler'; }
-            enemies.push(new Enemy(spawnX, spawnY, type, currentLevel));
-        }
-        if (frameCount % (finalSpawnRate * 8) === 0) enemies.push(new Enemy(canvas.width / 2, -30, 'big', currentLevel));
-        if (currentDistance >= totalDistance) { bossSpawned = true; bossObj = new Enemy(canvas.width / 2, -100, 'boss', currentLevel); enemies.push(bossObj); }
-    }
-
-    if (comboTimer > 0) comboTimer--; else { currentHits = 0; }
-
-    player.update();
-    playerBullets.forEach(pb => pb.update());
-    enemyBullets.forEach(eb => eb.update());
-    enemies.forEach(e => e.update());
-    explosions.forEach(exp => exp.update());
-    scraps.forEach(s => s.update());
-    powerItems.forEach(pi => pi.update());
-    grazeSparks.forEach(gs => gs.update());
-
-    // Collisions
-    playerBullets.forEach(pb => {
-        enemies.forEach(enemy => {
-            if (!pb.markedForDeletion && !enemy.markedForDeletion && checkCollision(pb, enemy)) {
-                if (pb.isPenetrating && pb.hitList.includes(enemy)) return;
-                if (!pb.isPenetrating) pb.markedForDeletion = true; else pb.hitList.push(enemy);
-                let dmg = pb.damage;
-                if (enemy.type === 'boss') { let dist = Math.sqrt((player.x - enemy.x)**2 + (player.y - enemy.y)**2); if (dist < 60) dmg *= 0.1; }
-                enemy.hp -= dmg;
-                if (enemy.hp <= 0) {
-                    enemy.markedForDeletion = true; enemy.dropScrap();
-                    if (playerUnlocks.autoScavenger && player.minions.length < 2 && enemy.type !== 'boss' && enemy.type !== 'carrier') player.minions.push(new Minion(enemy.x, enemy.y));
-                    if (currentLevel >= 5 && Math.random() < 0.3 && enemy.type !== 'boss' && enemy.type !== 'carrier') { let angle = Math.atan2(player.y - enemy.y, player.x - enemy.x); enemyBullets.push(new EnemyBullet(enemy.x, enemy.y, Math.cos(angle)*3, Math.sin(angle)*3)); }
-                    if (enemy.type === 'boss') { for(let i=0; i<10; i++) explosions.push(new Explosion(enemy.x + (Math.random()-0.5)*80, enemy.y + (Math.random()-0.5)*80, true)); score += 50000; setTimeout(triggerStageClear, 3000); } 
-                    else { explosions.push(new Explosion(enemy.x, enemy.y, pb.isCharge)); }
-                    addHitScore();
-                }
-            }
-        });
-    });
-
-    explosions.forEach(exp => {
-        if (exp.maxRadius > 30) {
-            enemies.forEach(enemy => {
-                if (!enemy.markedForDeletion && checkCollision(exp, enemy)) {
-                    enemy.hp -= 0.5 * playerStats.baseDamage;
-                    if (enemy.hp <= 0) {
-                        enemy.markedForDeletion = true; enemy.dropScrap();
-                        if (playerUnlocks.autoScavenger && player.minions.length < 2 && enemy.type !== 'boss' && enemy.type !== 'carrier') player.minions.push(new Minion(enemy.x, enemy.y));
-                        if (enemy.type === 'boss') { for(let i=0; i<10; i++) explosions.push(new Explosion(enemy.x + (Math.random()-0.5)*80, enemy.y + (Math.random()-0.5)*80, true)); score += 50000; setTimeout(triggerStageClear, 3000); } 
-                        else { explosions.push(new Explosion(enemy.x, enemy.y, true)); }
-                        addHitScore();
-                    }
-                }
-            });
-        }
-    });
-
-    enemyBullets.forEach(eb => {
-        if (!eb.markedForDeletion) {
-            let dist = checkDistance(eb, player);
-            if (dist < player.grazeRadius + eb.radius && dist > player.radius + eb.radius && eb.grazedCooldown <= 0 && !player.isBerserk) {
-                player.addErosion(5); grazeSparks.push(new GrazeSpark(eb.x, eb.y)); eb.grazedCooldown = 30; score += 10;
-            }
-            if (player.invincibleTimer <= 0 && !player.isBerserk && !player.isBombing) { 
-                if (checkCollision(eb, {x: player.x, y: player.y + 5, radius: player.radius})) {
-                    if (playerUnlocks.deadManSwitch && player.bombs > 0) { player.triggerBomb(); }
-                    else {
-                        player.hp--; player.invincibleTimer = 60; score = Math.max(0, score - 500); player.powerLevel = Math.max(0, player.powerLevel - 1); 
-                        eb.markedForDeletion = true; currentHits = 0; if (player.hp <= 0) triggerGameOver();
-                    }
-                }
-            }
-        }
-    });
-
-    enemies.forEach(enemy => {
-        if (!enemy.markedForDeletion) {
-            let isAttacking = player.isBerserk || player.isBombing;
-            if (isAttacking) {
-                if (checkCollision(enemy, player, 10)) {
-                    let damage = (player.isBerserk ? 50 : 5); if (enemy.type === 'boss') damage = 3; 
-                    enemy.hp -= damage; grazeSparks.push(new GrazeSpark((player.x+enemy.x)/2, (player.y+enemy.y)/2));
-                    if (enemy.hp <= 0) {
-                        enemy.markedForDeletion = true; enemy.dropScrap();
-                        if (playerUnlocks.autoScavenger && player.minions.length < 2 && enemy.type !== 'boss' && enemy.type !== 'carrier') player.minions.push(new Minion(enemy.x, enemy.y));
-                        if (enemy.type === 'boss') { for(let i=0; i<10; i++) explosions.push(new Explosion(enemy.x + (Math.random()-0.5)*80, enemy.y + (Math.random()-0.5)*80, true)); score += 50000; setTimeout(triggerStageClear, 3000); } 
-                        else { explosions.push(new Explosion(enemy.x, enemy.y, true)); }
-                        addHitScore();
-                    } else if (enemy.type !== 'boss') enemy.y -= 2;
-                }
-            } else if (player.invincibleTimer <= 0) {
-                if (checkCollision(enemy, {x: player.x, y: player.y + 5, radius: player.radius})) {
-                    if (playerUnlocks.deadManSwitch && player.bombs > 0) { player.triggerBomb(); }
-                    else {
-                        player.hp--; player.invincibleTimer = 60; score = Math.max(0, score - 500); currentHits = 0; player.powerLevel = Math.max(0, player.powerLevel - 1); 
-                        if (enemy.type !== 'boss') { enemy.hp -= 5 * playerStats.baseDamage; if (enemy.hp <= 0) { enemy.markedForDeletion = true; enemy.dropScrap(); explosions.push(new Explosion(enemy.x, enemy.y, false)); } }
-                        if (player.hp <= 0) triggerGameOver();
-                    }
-                }
-            }
-        }
-    });
-
-    // Cleanup
-    playerBullets = playerBullets.filter(pb => !pb.markedForDeletion);
-    enemyBullets = enemyBullets.filter(eb => !eb.markedForDeletion);
-    enemies = enemies.filter(e => !e.markedForDeletion);
-    explosions = explosions.filter(exp => !exp.markedForDeletion);
-    scraps = scraps.filter(s => !s.markedForDeletion);
-    powerItems = powerItems.filter(pi => !pi.markedForDeletion);
-    grazeSparks = grazeSparks.filter(gs => gs.life > 0);
-}
-
-function drawGame(ctx) {
-    if (!ctx || !player) return;
-
-    // Common Draw
-    scraps.forEach(s => s.draw(ctx));
-    powerItems.forEach(pi => pi.draw(ctx));
-    grazeSparks.forEach(gs => gs.draw(ctx));
-    playerBullets.forEach(pb => pb.draw(ctx));
-    enemyBullets.forEach(eb => eb.draw(ctx));
-    enemies.forEach(e => e.draw(ctx));
-    player.draw(ctx);
-    explosions.forEach(exp => exp.draw(ctx));
-    
-    // UI (Boss HP Bar)
-    if (!bossSpawned) {
-        let gH = canvas.height * 0.5, gY = canvas.height * 0.25, gX = canvas.width - 15;
-        ctx.fillStyle = "rgba(50, 50, 50, 0.5)"; ctx.fillRect(gX, gY, 4, gH);
-        let p = currentDistance / totalDistance, fH = gH * p;
-        ctx.fillStyle = `rgb(${Math.floor(255 * p)}, ${Math.floor(255 * (1 - p))}, 0)`;
-        ctx.fillRect(gX - 2, gY + gH - fH, 8, fH);
-        ctx.fillStyle = "#fff"; ctx.fillRect(gX - 4, gY + gH - fH - 2, 12, 4);
-        ctx.fillStyle = "#f00"; ctx.fillRect(gX - 4, gY - 4, 12, 4);
-    } else if (bossObj && !bossObj.markedForDeletion) {
-        let hpR = Math.max(0, bossObj.hp / bossObj.maxHp);
-        ctx.fillStyle = "rgba(50, 0, 0, 0.8)"; ctx.fillRect(50, 40, canvas.width - 100, 10);
-        ctx.fillStyle = hpR > 0.3 ? "#f00" : "#ff0"; ctx.fillRect(50, 40, (canvas.width - 100) * hpR, 10);
-        ctx.fillStyle = "#fff"; ctx.font = "bold 14px 'Courier New'"; ctx.textAlign = "center";
-        ctx.fillText(`Lv.${currentLevel} UNKNOWN ENTITY`, canvas.width / 2, 35);
-        ctx.textAlign = "left";
-    }
-}
-
-// 4. Initialize & Event Listeners
-function initGame() {
+// 5. Initialize on Load
+window.onload = function() {
     canvas = document.getElementById('gameCanvas'); 
     if(!canvas) return;
     
