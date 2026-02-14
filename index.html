@@ -74,14 +74,11 @@
     <div id="shop-screen" class="overlay-screen hidden">
         <h1 style="color:#0ff;">ASSIMILATION</h1>
         <div class="scrap-display" id="shop-scrap">SCRAP: 0</div>
-        
         <div class="shop-tabs">
             <div class="shop-tab active" id="tab-stat">ENHANCE</div>
             <div class="shop-tab" id="tab-unlock">UNLOCK</div>
-            <!-- ここにあったstyle属性を削除しました -->
             <div class="shop-tab" id="tab-module">MODULE</div>
         </div>
-
         <div id="shop-items"></div>
         <button class="btn" id="btn-shop-return" style="margin-top: 30px; border-color:#888; color:#888;">RETURN</button>
     </div>
@@ -102,8 +99,7 @@
     </div>
 </div>
 
-<script src="config.js"></script>
-<script src="classes.js"></script>
+<!-- 修正: 読み込むスクリプトを game.js 1つだけに統合 -->
 <script src="game.js"></script>
 </body>
 </html>
