@@ -151,6 +151,7 @@ class Player {
         if (frameCount % 4 === 0) {
             let angle = Math.random() * Math.PI * 2;
             let speed = 15;
+            // 発狂弾: 追尾かつ貫通→修正: 非貫通
             playerBullets.push(new PlayerBullet(this.x, this.y, Math.cos(angle)*speed, Math.sin(angle)*speed, true, false, null, true, false));
         }
         if (this.berserkTimer <= 0) {
@@ -183,6 +184,7 @@ class Player {
                     playerBullets.push(new HomingBullet(this.x, this.y, target, this.powerLevel >= 2));
                 });
             } else {
+                // 非ロックオンチャージ: 修正 非貫通(false)
                 playerBullets.push(new PlayerBullet(this.x, this.y - 20, 0, -20, true, this.powerLevel >= 2, null, false, false)); 
             }
         }
@@ -521,6 +523,7 @@ window.onload = function() {
             isTouching = true; 
             touchStartX = lastTouchX; touchStartY = lastTouchY; touchStartTime = Date.now();
         } else if (e.touches.length === 2) {
+            // 2本指タップでボム
             player.triggerBomb();
         }
     }, { passive: false });
@@ -566,12 +569,15 @@ function loadGameData() {
         const saved = localStorage.getItem(SAVE_KEY);
         if (saved) {
             const data = JSON.parse(saved);
-            totalScrap = data.totalScrap || 0;
-            maxUnlockedLevel = data.maxUnlockedLevel || 1;
-            playerStats = { ...playerStats, ...data.playerStats };
-            playerUnlocks = { ...playerUnlocks, ...data.playerUnlocks };
+            totalScrap = (typeof data.totalScrap === 'number') ? data.totalScrap : 0;
+            maxUnlockedLevel = (typeof data.maxUnlockedLevel === 'number') ? data.maxUnlockedLevel : 1; 
+            
+            if (data.playerStats) playerStats = { ...playerStats, ...data.playerStats };
+            if (data.playerUnlocks) playerUnlocks = { ...playerUnlocks, ...data.playerUnlocks };
         }
-    } catch (e) {}
+    } catch (e) {
+        console.error("Save data corrupted, resetting to defaults.", e);
+    }
 }
 
 function resetSaveData() {
@@ -692,6 +698,7 @@ function triggerStageClear() {
 
 function triggerGameOver() {
     appState = 'gameover';
+    
     if (playerUnlocks.midasCurse && !player.usedMidas) {
         if (totalScrap >= 100) { 
              if(confirm("黄金の呪いが発動しますか？ (所持金の半分を消費して復活)")) {
@@ -707,6 +714,7 @@ function triggerGameOver() {
              }
         }
     }
+
     totalScrap += collectedScrapInRun;
     saveGameData(); 
     hideAllScreens();
@@ -736,20 +744,20 @@ function openTitleFromPause() {
 
 function renderStageGrid() {
     const grid = document.getElementById('stage-grid');
+    if (!grid) return;
     grid.innerHTML = '';
-    let displayMax = Math.max(10, Math.ceil(maxUnlockedLevel / 5) * 5);
+    
+    // 安全策
+    let safeLevel = (typeof maxUnlockedLevel === 'number' && maxUnlockedLevel >= 1) ? maxUnlockedLevel : 1;
+    let displayMax = Math.max(10, Math.ceil(safeLevel / 5) * 5);
+    
     for(let i=1; i<=displayMax; i++) {
         let btn = document.createElement('div');
         btn.className = 'stage-btn' + (i > maxUnlockedLevel ? ' locked' : '');
         btn.innerText = i;
-        
         if(i <= maxUnlockedLevel) {
-            // クリックとタッチ両方に対応 (確実に反応させるため)
             btn.onclick = function() { showStageConfirm(i); };
-            btn.ontouchend = function(e) { 
-                e.preventDefault(); 
-                showStageConfirm(i); 
-            };
+            btn.ontouchend = function(e) { e.preventDefault(); showStageConfirm(i); };
         }
         grid.appendChild(btn);
     }
@@ -793,7 +801,6 @@ function renderShop() {
                 <div class="shop-cost">${isUnlocked ? '---' : `REQ: ${cost} SCRAP`}</div>
             </div>
         `;
-        // ボタン生成 (ontouchendも追加)
         let btn = document.createElement('button');
         btn.className = 'btn';
         btn.style.width = 'auto';
@@ -916,7 +923,9 @@ function updateGame() {
     if (playerUnlocks.adrenalineBurst) {
         let nearby = false;
         for (let eb of enemyBullets) {
-            if (checkDistance(player, eb) < player.grazeRadius + 10) { nearby = true; break; }
+            if (checkDistance(player, eb) < player.grazeRadius + 10) { 
+                nearby = true; break;
+            }
         }
         if (nearby) gameSpeed = 0.5;
     }
@@ -1127,6 +1136,36 @@ function updateGame() {
     grazeSparks = grazeSparks.filter(gs => gs.life > 0);
 }
 
+function drawGame(ctx) {
+    // 共通描画処理
+    scraps.forEach(s => s.draw(ctx));
+    powerItems.forEach(pi => pi.draw(ctx));
+    grazeSparks.forEach(gs => gs.draw(ctx));
+    playerBullets.forEach(pb => pb.draw(ctx));
+    enemyBullets.forEach(eb => eb.draw(ctx));
+    enemies.forEach(e => e.draw(ctx));
+    player.draw(ctx);
+    explosions.forEach(exp => exp.draw(ctx));
+    
+    // UI
+    if (!bossSpawned) {
+        let gH = canvas.height * 0.5, gY = canvas.height * 0.25, gX = canvas.width - 15;
+        ctx.fillStyle = "rgba(50, 50, 50, 0.5)"; ctx.fillRect(gX, gY, 4, gH);
+        let p = currentDistance / totalDistance, fH = gH * p;
+        ctx.fillStyle = `rgb(${Math.floor(255 * p)}, ${Math.floor(255 * (1 - p))}, 0)`;
+        ctx.fillRect(gX - 2, gY + gH - fH, 8, fH);
+        ctx.fillStyle = "#fff"; ctx.fillRect(gX - 4, gY + gH - fH - 2, 12, 4);
+        ctx.fillStyle = "#f00"; ctx.fillRect(gX - 4, gY - 4, 12, 4);
+    } else if (bossObj && !bossObj.markedForDeletion) {
+        let hpR = Math.max(0, bossObj.hp / bossObj.maxHp);
+        ctx.fillStyle = "rgba(50, 0, 0, 0.8)"; ctx.fillRect(50, 40, canvas.width - 100, 10);
+        ctx.fillStyle = hpR > 0.3 ? "#f00" : "#ff0"; ctx.fillRect(50, 40, (canvas.width - 100) * hpR, 10);
+        ctx.fillStyle = "#fff"; ctx.font = "bold 14px 'Courier New'"; ctx.textAlign = "center";
+        ctx.fillText(`Lv.${currentLevel} UNKNOWN ENTITY`, canvas.width / 2, 35);
+        ctx.textAlign = "left";
+    }
+}
+
 // 6. Event Listeners
 window.addEventListener('resize', resizeCanvas);
 
@@ -1143,3 +1182,58 @@ function syncTouchPosition(e) {
         lastTouchY = e.touches[0].clientY;
     }
 }
+
+// タッチ入力リスナー
+canvas.addEventListener('touchstart', e => {
+    if(appState !== 'playing') return;
+    e.preventDefault();
+    
+    // タッチ開始時、常に指の座標を同期してワープ防止
+    syncTouchPosition(e);
+
+    if (e.touches.length === 1) {
+        isTouching = true; 
+        touchStartX = lastTouchX; touchStartY = lastTouchY; touchStartTime = Date.now();
+    } else if (e.touches.length === 2) {
+        // 2本指タップでボム
+        player.triggerBomb();
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+    if(appState !== 'playing') return;
+    e.preventDefault();
+    
+    if (e.touches.length === 0) return;
+
+    let cx = e.touches[0].clientX;
+    let cy = e.touches[0].clientY;
+    
+    // ワープ防止: 前回座標との距離が異常値（100px以上）なら移動をスキップして座標同期のみ
+    let dist = Math.hypot(cx - lastTouchX, cy - lastTouchY);
+    if (dist < 100) { 
+        // 修正: 2本指でも減速せず、指の動きに等速で追従
+        player.x += (cx - lastTouchX);
+        player.y += (cy - lastTouchY);
+    }
+    
+    lastTouchX = cx;
+    lastTouchY = cy;
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+    if(appState !== 'playing') return;
+    e.preventDefault();
+    
+    // 指を離した時も、残った指があればそこに同期
+    syncTouchPosition(e);
+
+    // isTouching の更新を正しく行う
+    if (e.touches.length === 0) {
+         if (isTouching) { // タッチしていた状態から離した
+             player.releaseCharge();
+         }
+         isTouching = false;
+    }
+
+}, { passive: false });
