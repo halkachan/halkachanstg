@@ -55,7 +55,7 @@ let playerUnlocks = {
     vampireDrive: false, guillotineField: false, midasCurse: false, berserkTrigger: false
 };
 
-const SAVE_KEY = 'abyss_core_save_v4';
+const SAVE_KEY = 'abyss_core_save_v5';
 
 // Upgrade Data
 const upgradeData = {
@@ -93,7 +93,6 @@ function getCanvasRelativeCoords(e) {
     let clientX = e.touches ? e.touches[0].clientX : e.clientX;
     let clientY = e.touches ? e.touches[0].clientY : e.clientY;
     
-    // Canvasの内部解像度と表示サイズの比率を計算
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     
@@ -140,11 +139,9 @@ function resizeCanvas() {
     const container = document.getElementById('game-container');
     if (!container || !canvas) return;
     
-    // 画面サイズ設定 (10:16のアスペクト比を維持)
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
 
-    // プレイヤーが画面外に出ないように調整
     if(player && player.y > canvas.height) player.y = canvas.height - 100;
 }
 
@@ -220,11 +217,9 @@ function startGame(level) {
     hideAllScreens();
     if(uiLayer) uiLayer.style.display = 'block';
     
-    // Player Init
     if (!player) player = new Player();
     player.hp = playerStats.maxHp;
     
-    // Force Position Reset
     if(canvas) {
         player.x = canvas.width / 2;
         player.y = canvas.height - 100;
@@ -454,6 +449,8 @@ function addHitScore() {
     }
 }
 
+// --- 4. Game Loop ---
+
 function gameLoop() {
     if (appState === 'paused') { drawGame(ctx); requestAnimationFrame(gameLoop); return; }
     if (!ctx) return;
@@ -628,4 +625,4 @@ function drawGame(ctx) {
 
 // Global Start
 window.addEventListener('resize', resizeCanvas);
-// window.addEventListener('load', initGame) is moved to 4. SYSTEM & INIT section's window.onload
+// window.addEventListener('load', initGame) is in window.onload
