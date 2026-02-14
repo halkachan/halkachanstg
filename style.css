@@ -22,7 +22,7 @@ html, body {
     width: 100%;
     height: 100%;
     max-width: 480px; 
-    aspect-ratio: 9 / 16; /* iPhoneライクな比率に戻しました */
+    aspect-ratio: 9 / 16; /* iPhoneライクな比率 */
     max-height: 100vh; 
     background: #000;
     overflow: hidden;
@@ -43,11 +43,10 @@ canvas {
     left: 10px;
     width: calc(100% - 20px);
     pointer-events: none;
-    display: none; /* プレイ中のみ表示 */
+    display: none;
     z-index: 10;
 }
 
-/* UI Components */
 .ui-top-row {
     display: flex;
     justify-content: space-between;
@@ -56,7 +55,6 @@ canvas {
 .ui-left { text-align: left; }
 .ui-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
 
-/* Status Text */
 #hpDisplay { font-size: 20px; font-weight: bold; color: #f05; }
 #scoreDisplay { font-size: 16px; font-weight: bold; color: #0ff; }
 #playScrapDisplay { font-size: 16px; font-weight: bold; color: #0ff; margin-top: 5px; }
@@ -86,7 +84,7 @@ kbd {
     color: #fff;
 }
 
-/* Screens & Overlays */
+/* Screens */
 .overlay-screen {
     position: absolute;
     top: 0;
@@ -178,7 +176,7 @@ h1 {
 }
 #berserk-btn:active { background: rgba(255, 0, 0, 0.5); transform: scale(0.95); }
 
-/* Stage Select */
+/* Stage Grid */
 .stage-grid {
     display: flex;
     flex-wrap: wrap;
@@ -202,7 +200,7 @@ h1 {
 }
 .stage-btn.locked { border-color: #333; color: #333; cursor: not-allowed; }
 
-/* Shop */
+/* Shop Tabs */
 .shop-tabs {
     display: flex;
     justify-content: center;
@@ -241,6 +239,7 @@ h1 {
     padding-bottom: 20px;
     touch-action: pan-y; 
 }
+
 .shop-item {
     display: flex;
     justify-content: space-between;
@@ -256,17 +255,7 @@ h1 {
 .shop-desc { color: #888; font-size: 0.75rem; line-height: 1.2; margin-top: 2px; }
 .shop-cost { color: #0ff; font-size: 0.9rem; } 
 
-/* Confirmation Modal */
-#stage-confirm-modal {
-    background: rgba(0, 0, 0, 0.95);
-    border: 2px solid #f05;
-    padding: 20px;
-    text-align: center;
-    z-index: 200;
-    width: 80%;
-    max-width: 400px;
-}
-
+/* Pollution Warning */
 #pollution-warning {
     position: absolute;
     top: 20%;
@@ -283,7 +272,6 @@ h1 {
     background: rgba(255, 0, 0, 0.1);
 }
 
-/* Animations & Effects */
 .berserk-active canvas { filter: contrast(1.5) sepia(1) hue-rotate(-50deg) saturate(3); }
 .bomb-active canvas { filter: invert(1); }
 .slow-active canvas { box-shadow: inset 0 0 100px rgba(0, 255, 255, 0.3); }

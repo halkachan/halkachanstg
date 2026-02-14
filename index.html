@@ -49,7 +49,7 @@
         <button class="btn btn-reset" id="btn-reset">RESET MEMORY</button>
         <div class="instructions" style="position:relative; bottom:0; margin-top:20px;">
             [スマホ] ドラッグ:移動&連射 | 指離す:ホーミング | 2本指タップ:ボム<br>
-            [PC] 移動:矢印 | 弾/ロック:Z | ボム:X | 発狂:V (Module)<br>
+            [PC] 移動:矢印/マウス | 弾/ロック:Z/左クリック | ボム:X/右クリック | 発狂:V<br>
             ★上部(30%)エリアは汚染区域。長居するとHP減少！
         </div>
     </div>
@@ -90,6 +90,7 @@
         </div>
 
         <div id="shop-items"></div>
+        
         <button class="btn" id="btn-shop-return" style="margin-top: 30px; border-color:#888; color:#888;">RETURN</button>
     </div>
 
@@ -110,7 +111,9 @@
     </div>
 </div>
 
-<!-- ロジックの読み込み -->
+<!-- 分割したスクリプトを正しい順序で読み込む -->
+<script src="config.js"></script>
+<script src="classes.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

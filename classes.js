@@ -16,13 +16,11 @@ class Player {
 
         this.invincibleTimer = 0;
         this.shotTimer = 0;
-        
         this.chargeAmount = 0;
         this.isCharging = false;
         this.chargeMax = 60;
         this.lockOnRadius = (120 + (playerStats.maxLocks * 5)) * playerStats.lockRange;
         this.lockedTargets = new Set();
-        
         this.powerLevel = 0;
         this.bombs = playerStats.maxBombs;
         this.isBombing = false;
@@ -52,10 +50,8 @@ class Player {
                 if(playerUnlocks.vampireDrive) dmg *= 2;
                 e.hp -= dmg;
                 explosions.push(new Explosion(e.x, e.y, true));
-                
                 if (e.hp <= 0) {
-                    e.markedForDeletion = true; 
-                    e.dropScrap();
+                    e.markedForDeletion = true; e.dropScrap();
                     if (playerUnlocks.autoScavenger && player.minions.length < 2 && e.type !== 'boss') {
                         player.minions.push(new Minion(e.x, e.y));
                     }
@@ -269,15 +265,12 @@ class Player {
 
     draw(ctx) {
         if (this.invincibleTimer > 0 && frameCount % 8 < 4 && !this.isBerserk && !this.isBombing) return;
-        
-        ctx.save();
-        ctx.translate(this.x, this.y);
+        ctx.save(); ctx.translate(this.x, this.y);
         
         if (this.isBerserk) {
             ctx.shadowBlur = 30; ctx.shadowColor = "#f05";
             if (frameCount % 4 === 0) ctx.translate((Math.random()-0.5)*4, (Math.random()-0.5)*4); 
         }
-        
         if (this.isBombing) {
             ctx.shadowBlur = 50; ctx.shadowColor = "#fff"; ctx.strokeStyle = "#fff"; ctx.lineWidth = 5;
             ctx.beginPath(); ctx.arc(0, 0, (60 - this.bombTimer) * 10, 0, Math.PI * 2); ctx.stroke();
@@ -288,12 +281,8 @@ class Player {
         ctx.fillStyle = this.isBerserk ? "#500" : "#0ff";
         ctx.fillRect(-10, -32, 4, 10); ctx.fillRect(6, -32, 4, 10);
         
-        if (this.powerLevel >= 1) { 
-            ctx.fillStyle = "#ccc"; ctx.fillRect(-18, -20, 4, 20); ctx.fillRect(14, -20, 4, 20); 
-        }
-        if (this.powerLevel >= 2) { 
-            ctx.fillStyle = "#0ff"; ctx.fillRect(-22, -15, 4, 15); ctx.fillRect(18, -15, 4, 15); 
-        }
+        if (this.powerLevel >= 1) { ctx.fillStyle = "#ccc"; ctx.fillRect(-18, -20, 4, 20); ctx.fillRect(14, -20, 4, 20); }
+        if (this.powerLevel >= 2) { ctx.fillStyle = "#0ff"; ctx.fillRect(-22, -15, 4, 15); ctx.fillRect(18, -15, 4, 15); }
         
         ctx.fillStyle = this.isBerserk ? "#fff" : "#f05";
         ctx.beginPath(); ctx.arc(0, 5, 5, 0, Math.PI * 2); ctx.fill();
@@ -329,10 +318,7 @@ class Player {
 }
 
 class Minion {
-    constructor(x, y) { 
-        this.x = x; this.y = y; 
-        this.markedForDeletion = false; this.shotTimer = 0; 
-    }
+    constructor(x, y) { this.x = x; this.y = y; this.markedForDeletion = false; this.shotTimer = 0; }
     update(index) {
         let targetOffsetX = index === 0 ? -30 : 30; 
         let targetOffsetY = 20;
@@ -383,22 +369,18 @@ class PlayerBullet {
             for (let e of enemies) {
                 if (e.y > 0 && e.y < canvas.height) { 
                     if (this.isPenetrating && this.hitList.includes(e)) continue;
-                    let d = (e.x - this.x)**2 + (e.y - this.y)**2; 
-                    if (d < minDist) { minDist = d; nearest = e; }
+                    let d = (e.x - this.x)**2 + (e.y - this.y)**2; if (d < minDist) { minDist = d; nearest = e; }
                 }
             }
             if (nearest) {
                 let targetAngle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
                 let currentAngle = Math.atan2(this.vy, this.vx);
                 let diff = targetAngle - currentAngle;
-                while (diff > Math.PI) diff -= Math.PI * 2; 
-                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2; while (diff < -Math.PI) diff += Math.PI * 2;
                 let turnSpeed = 0.15;
-                if (Math.abs(diff) < turnSpeed) currentAngle = targetAngle; 
-                else currentAngle += (diff > 0 ? turnSpeed : -turnSpeed);
+                if (Math.abs(diff) < turnSpeed) currentAngle = targetAngle; else currentAngle += (diff > 0 ? turnSpeed : -turnSpeed);
                 let speed = Math.sqrt(this.vx**2 + this.vy**2);
-                this.vx = Math.cos(currentAngle) * speed; 
-                this.vy = Math.sin(currentAngle) * speed;
+                this.vx = Math.cos(currentAngle) * speed; this.vy = Math.sin(currentAngle) * speed;
             }
         }
         this.x += this.vx; this.y += this.vy;
@@ -582,16 +564,17 @@ class PowerItem {
 }
 
 /* -----------------------------------------------------
-   3. MAIN INIT & LOGIC (Global Functions)
+   4. SYSTEM & INIT
    ----------------------------------------------------- */
 
-function initGame() {
-    canvas = document.getElementById('gameCanvas'); 
+// Window Load - Main Entry Point
+window.onload = function() {
+    canvas = document.getElementById('gameCanvas');
     ctx = canvas.getContext('2d');
     uiLayer = document.getElementById('ui-layer');
     body = document.getElementById('body');
 
-    // UI Helper
+    // UI Listeners
     function setBtn(id, callback) {
         const el = document.getElementById(id);
         if(el) {
@@ -599,8 +582,6 @@ function initGame() {
             el.ontouchend = (e) => { e.preventDefault(); callback(); };
         }
     }
-    
-    // Set Listeners
     setBtn('btn-shop', openShop);
     setBtn('btn-reset', resetSaveData);
     setBtn('btn-shop-return', openTitle);
@@ -615,7 +596,7 @@ function initGame() {
     setBtn('tab-unlock', () => switchShopTab('unlock'));
     setBtn('tab-module', () => switchShopTab('module'));
     
-    // Mouse Inputs
+    // --- Mouse Inputs ---
     function getCanvasRelativeCoords(e) {
         const rect = canvas.getBoundingClientRect();
         let clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -657,7 +638,7 @@ function initGame() {
     });
     canvas.addEventListener('contextmenu', e => { e.preventDefault(); if(appState === 'playing') player.triggerBomb(); });
 
-    // Touch Inputs
+    // --- Touch Inputs ---
     function syncTouchPosition(e) {
         if (e.touches && e.touches.length > 0) {
             const coords = getCanvasRelativeCoords(e);
@@ -701,12 +682,15 @@ function initGame() {
     });
     window.addEventListener('keyup', e => keys[e.code] = false);
 
-    // Start!
+    // Initial Setup
     resizeCanvas();
     player = new Player(); 
     openTitle();
     gameLoop();
-}
+    console.log("Game Initialized");
+};
+
+// --- Helper Functions ---
 
 function saveGameData() {
     const data = { totalScrap, maxUnlockedLevel, playerStats, playerUnlocks };
@@ -818,7 +802,8 @@ function startGame(level) {
     hideAllScreens();
     if(uiLayer) uiLayer.style.display = 'block';
     
-    // Player Re-initialization with Safety
+    // Player Re-initialization
+    // プレイヤーがいない場合、または再開時に必ず中央下へ配置
     if (!player) player = new Player();
     player.hp = playerStats.maxHp;
     
