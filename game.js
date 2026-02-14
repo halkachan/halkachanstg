@@ -1,10 +1,10 @@
 // ==========================================
-// ABYSS CORE - GAME LOGIC (COMPLETE)
+// ABYSS CORE - GAME LOGIC
 // ==========================================
 
 // --- 1. Global Variables ---
 let canvas, ctx;
-let uiLayer, body; // UI要素
+let uiLayer, body; 
 let totalScrap = 0;
 let maxUnlockedLevel = 1;
 let currentShopTab = 'stat';
@@ -35,7 +35,8 @@ let grazeSparks = [];
 const keys = {};
 let isTouching = false;
 let lastTouchX = 0, lastTouchY = 0;
-// タッチ開始位置（ボム判定用）は不要になったが、念のため残しておくか削除してもよい。今回は削除整理済み。
+// Mouse input
+let isMouseDown = false;
 
 // Stats
 let playerStats = {
@@ -204,8 +205,11 @@ class Player {
         if (keys['ArrowUp']) this.y -= speed;
         if (keys['ArrowDown']) this.y += speed;
         if (keys['KeyV'] && playerUnlocks.berserkTrigger) this.triggerBerserkManual();
+        
+        // --- 修正: マウス/タッチ座標の画面内制限 ---
         this.x = Math.max(10, Math.min(canvas.width - 10, this.x));
         this.y = Math.max(10, Math.min(canvas.height - 10, this.y));
+
         if (keys['KeyX']) this.triggerBomb();
 
         this.updateBerserk();
@@ -225,8 +229,9 @@ class Player {
         this.minions = this.minions.filter(m => !m.markedForDeletion);
         this.minions.forEach((m, idx) => m.update(idx)); 
 
-        let isShootingInput = keys['KeyZ'] || isTouching;
-        let isChargingInput = keys['KeyZ'] || isTouching;
+        // PCでのマウス操作対応: isMouseDown or isTouching
+        let isShootingInput = keys['KeyZ'] || isTouching || isMouseDown;
+        let isChargingInput = keys['KeyZ'] || isTouching || isMouseDown;
 
         if (isShootingInput) {
             if (isChargingInput) {
@@ -257,7 +262,9 @@ class Player {
             }
         }
 
-        if (!keys['KeyZ'] && this.isCharging && !isTouching) this.releaseCharge();
+        // キーボード、タッチ、マウスいずれかが解除されたら発射
+        if (!keys['KeyZ'] && this.isCharging && !isTouching && !isMouseDown) this.releaseCharge();
+        
         if (this.shotTimer > 0) this.shotTimer--;
         if (this.invincibleTimer > 0) this.invincibleTimer--;
         
@@ -294,7 +301,7 @@ class Player {
             ctx.restore();
         }
         this.minions.forEach(m => m.draw(ctx));
-        if (keys['ShiftLeft'] || keys['ShiftRight'] || isTouching) { if (this.isCharging) { ctx.strokeStyle = "rgba(0, 255, 0, 0.3)"; ctx.beginPath(); ctx.arc(this.x, this.y - 150, this.lockOnRadius, 0, Math.PI * 2); ctx.stroke(); } }
+        if (keys['ShiftLeft'] || keys['ShiftRight'] || isTouching || isMouseDown) { if (this.isCharging) { ctx.strokeStyle = "rgba(0, 255, 0, 0.3)"; ctx.beginPath(); ctx.arc(this.x, this.y - 150, this.lockOnRadius, 0, Math.PI * 2); ctx.stroke(); } }
         if (this.chargeAmount >= this.chargeMax) {
             ctx.strokeStyle = this.isBerserk ? "rgba(255, 0, 0, 0.5)" : "rgba(0, 255, 0, 0.5)"; ctx.lineWidth = 2;
             ctx.beginPath(); ctx.arc(this.x, this.y - 150, this.lockOnRadius, 0, Math.PI * 2); ctx.stroke();
@@ -522,22 +529,97 @@ window.onload = function() {
     setBtn('tab-unlock', () => switchShopTab('unlock'));
     setBtn('tab-module', () => switchShopTab('module'));
     
-    // Touch Events on Canvas
-    // Canvasの位置情報を取得して座標を補正する関数
+    // Mouse Events for PC
+    let isMouseDown = false;
+    
+    // 座標取得処理を一元化（タッチ/マウス両対応）
     function getCanvasRelativeCoords(e) {
         const rect = canvas.getBoundingClientRect();
-        // タッチイベントかマウスイベントかで座標取得方法を分岐
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        let clientX, clientY;
+        
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+
+        // キャンバスの描画サイズと表示サイズの比率を考慮（必要なら）
+        // 今回はCSSでサイズ制御しているので、そのまま相対座標でOKだが
+        // 正確を期すなら scaleX, scaleY を計算しても良い。
+        // ここでは単純なオフセット計算。
         return {
             x: clientX - rect.left,
             y: clientY - rect.top
         };
     }
 
-    // タッチ座標同期用関数（補正付き）
+    // マウス入力
+    canvas.addEventListener('mousedown', e => {
+        if(appState !== 'playing') return;
+        // 右クリックはコンテキストメニューが出るので除外（別途処理）
+        if (e.button === 2) return; 
+
+        e.preventDefault();
+        const coords = getCanvasRelativeCoords(e);
+        lastTouchX = coords.x;
+        lastTouchY = coords.y;
+        isMouseDown = true;
+        
+        // 左クリックでショット/チャージ開始
+        if (e.button === 0) {
+            isTouching = true; // チャージフラグとして流用
+        }
+    });
+
+    canvas.addEventListener('mousemove', e => {
+        if(appState !== 'playing') return;
+        e.preventDefault();
+        
+        if (isMouseDown) {
+            const coords = getCanvasRelativeCoords(e);
+            let cx = coords.x;
+            let cy = coords.y;
+            
+            // マウスは瞬間移動できるので距離制限は緩めに（あるいは無しで）
+            // ここではスマホ同様のロジックを流用
+            let dist = Math.hypot(cx - lastTouchX, cy - lastTouchY);
+            // 異常な飛びでなければ移動
+            if (dist < 300) { 
+                player.x += (cx - lastTouchX);
+                player.y += (cy - lastTouchY);
+                // 画面外へ出ないように制限
+                player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+                player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+            }
+            
+            lastTouchX = cx;
+            lastTouchY = cy;
+        }
+    });
+
+    canvas.addEventListener('mouseup', e => {
+        if(appState !== 'playing') return;
+        e.preventDefault();
+        
+        // 左クリック離したら発射
+        if (e.button === 0) {
+             if (isTouching) player.releaseCharge();
+             isTouching = false;
+        }
+        isMouseDown = false;
+    });
+
+    // 右クリックでボム
+    canvas.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        if(appState === 'playing') player.triggerBomb();
+    });
+
+    // Touch Events
     function syncTouchPosition(e) {
-        if (e.touches && e.touches.length > 0) {
+        if (e.touches.length > 0) {
             const coords = getCanvasRelativeCoords(e);
             lastTouchX = coords.x;
             lastTouchY = coords.y;
@@ -553,9 +635,7 @@ window.onload = function() {
         if (e.touches.length === 1) {
             isTouching = true; 
             const coords = getCanvasRelativeCoords(e);
-            touchStartX = coords.x; 
-            touchStartY = coords.y; 
-            touchStartTime = Date.now();
+            touchStartX = coords.x; touchStartY = coords.y; touchStartTime = Date.now();
         } else if (e.touches.length === 2) {
             // 2本指タップでボム
             player.triggerBomb();
@@ -565,7 +645,6 @@ window.onload = function() {
     canvas.addEventListener('touchmove', e => {
         if(appState !== 'playing') return;
         e.preventDefault();
-        
         if (e.touches.length === 0) return;
 
         const coords = getCanvasRelativeCoords(e);
@@ -576,8 +655,7 @@ window.onload = function() {
         if (dist < 100) { 
             player.x += (cx - lastTouchX);
             player.y += (cy - lastTouchY);
-            
-            // プレイヤー位置をキャンバス内に制限
+            // 画面外制限
             player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
             player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
         }
@@ -593,12 +671,9 @@ window.onload = function() {
         syncTouchPosition(e);
 
         if (e.touches.length === 0) {
-             if (isTouching) { 
-                 player.releaseCharge();
-             }
+             if (isTouching) player.releaseCharge();
              isTouching = false;
         }
-
     }, { passive: false });
 
     resizeCanvas();
@@ -636,7 +711,7 @@ function resizeCanvas() {
     if(canvas) {
         // ウィンドウのアスペクト比を計算
         const windowRatio = window.innerWidth / window.innerHeight;
-        const targetRatio = 9 / 16; // ターゲットのアスペクト比 (スマホ縦画面想定)
+        const targetRatio = 10 / 16; // ターゲットのアスペクト比 (少し太め)
 
         if (windowRatio > targetRatio) {
             // ウィンドウが横長の場合（PCなど）
@@ -645,7 +720,8 @@ function resizeCanvas() {
         } else {
             // ウィンドウが縦長の場合（スマホなど）
             canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            canvas.height = window.innerHeight; // アスペクト比維持のため幅が足りない場合は黒帯になるが、CSSでカバー
+            // 正確にはwidthに合わせてheightを決めるべきだが、全画面表示優先
         }
 
         // キャンバスサイズに合わせてプレイヤー位置を調整
@@ -985,6 +1061,7 @@ function updateGame() {
 
     if (!bossSpawned) {
         currentDistance += (player.isBerserk ? 4 : 2) * gameSpeed;
+        // 敵出現率計算を1.5倍に変更
         let baseSpawnRate = 90 / Math.pow(1.5, currentLevel - 1);
         baseSpawnRate = Math.max(10, baseSpawnRate); 
         if (player.isBerserk) baseSpawnRate = Math.max(5, baseSpawnRate / 2); 
@@ -1063,12 +1140,6 @@ function updateGame() {
                     if (playerUnlocks.autoScavenger && player.minions.length < 2 && enemy.type !== 'boss' && enemy.type !== 'carrier') {
                             player.minions.push(new Minion(enemy.x, enemy.y));
                     }
-                    
-                    if (currentLevel >= 5 && Math.random() < 0.3 && enemy.type !== 'boss' && enemy.type !== 'carrier') {
-                        let angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
-                        enemyBullets.push(new EnemyBullet(enemy.x, enemy.y, Math.cos(angle)*3, Math.sin(angle)*3));
-                    }
-
                     if (enemy.type === 'boss') {
                         for(let i=0; i<10; i++) explosions.push(new Explosion(enemy.x + (Math.random()-0.5)*80, enemy.y + (Math.random()-0.5)*80, true));
                         score += 50000;
@@ -1189,32 +1260,19 @@ function updateGame() {
     grazeSparks = grazeSparks.filter(gs => gs.life > 0);
 }
 
-function drawGame(ctx) {
-    // 共通描画処理
-    scraps.forEach(s => s.draw(ctx));
-    powerItems.forEach(pi => pi.draw(ctx));
-    grazeSparks.forEach(gs => gs.draw(ctx));
-    playerBullets.forEach(pb => pb.draw(ctx));
-    enemyBullets.forEach(eb => eb.draw(ctx));
-    enemies.forEach(e => e.draw(ctx));
-    player.draw(ctx);
-    explosions.forEach(exp => exp.draw(ctx));
-    
-    // UI
-    if (!bossSpawned) {
-        let gH = canvas.height * 0.5, gY = canvas.height * 0.25, gX = canvas.width - 15;
-        ctx.fillStyle = "rgba(50, 50, 50, 0.5)"; ctx.fillRect(gX, gY, 4, gH);
-        let p = currentDistance / totalDistance, fH = gH * p;
-        ctx.fillStyle = `rgb(${Math.floor(255 * p)}, ${Math.floor(255 * (1 - p))}, 0)`;
-        ctx.fillRect(gX - 2, gY + gH - fH, 8, fH);
-        ctx.fillStyle = "#fff"; ctx.fillRect(gX - 4, gY + gH - fH - 2, 12, 4);
-        ctx.fillStyle = "#f00"; ctx.fillRect(gX - 4, gY - 4, 12, 4);
-    } else if (bossObj && !bossObj.markedForDeletion) {
-        let hpR = Math.max(0, bossObj.hp / bossObj.maxHp);
-        ctx.fillStyle = "rgba(50, 0, 0, 0.8)"; ctx.fillRect(50, 40, canvas.width - 100, 10);
-        ctx.fillStyle = hpR > 0.3 ? "#f00" : "#ff0"; ctx.fillRect(50, 40, (canvas.width - 100) * hpR, 10);
-        ctx.fillStyle = "#fff"; ctx.font = "bold 14px 'Courier New'"; ctx.textAlign = "center";
-        ctx.fillText(`Lv.${currentLevel} UNKNOWN ENTITY`, canvas.width / 2, 35);
-        ctx.textAlign = "left";
+// 6. Event Listeners
+window.addEventListener('resize', resizeCanvas);
+
+window.addEventListener('keydown', e => {
+    if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) e.preventDefault();
+    keys[e.code] = true;
+});
+window.addEventListener('keyup', e => keys[e.code] = false);
+
+// タッチ座標同期用関数
+function syncTouchPosition(e) {
+    if (e.touches.length > 0) {
+        lastTouchX = e.touches[0].clientX;
+        lastTouchY = e.touches[0].clientY;
     }
 }
