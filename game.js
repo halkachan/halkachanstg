@@ -1,5 +1,5 @@
 // ==========================================
-// ABYSS CORE - GAME LOGIC (ROBUST VERSION)
+// ABYSS CORE - GAME LOGIC (FIXED FINAL 2)
 // ==========================================
 
 /* -----------------------------------------------------
@@ -147,14 +147,9 @@ function resizeCanvas() {
 
 function switchShopTab(tab) {
     currentShopTab = tab;
-    const tabStat = document.getElementById('tab-stat');
-    const tabUnlock = document.getElementById('tab-unlock');
-    const tabModule = document.getElementById('tab-module');
-    
-    if(tabStat) tabStat.classList.toggle('active', tab === 'stat');
-    if(tabUnlock) tabUnlock.classList.toggle('active', tab === 'unlock');
-    if(tabModule) tabModule.classList.toggle('active', tab === 'module');
-    
+    document.getElementById('tab-stat').classList.toggle('active', tab === 'stat');
+    document.getElementById('tab-unlock').classList.toggle('active', tab === 'unlock');
+    document.getElementById('tab-module').classList.toggle('active', tab === 'module');
     renderShop();
 }
 
@@ -172,61 +167,47 @@ function openTitle() {
     appState = 'title';
     hideAllScreens();
     loadGameData(); 
-    const titleScreen = document.getElementById('title-screen');
-    if(titleScreen) titleScreen.classList.remove('hidden');
-    const titleScrap = document.getElementById('title-scrap');
-    if(titleScrap) titleScrap.innerText = `SCRAP: ${Math.floor(totalScrap)}`;
+    document.getElementById('title-screen').classList.remove('hidden');
+    document.getElementById('title-scrap').innerText = `SCRAP: ${Math.floor(totalScrap)}`;
     renderStageGrid();
 }
 
 function openShop() {
     appState = 'shop';
     hideAllScreens();
-    const shopScreen = document.getElementById('shop-screen');
-    if(shopScreen) shopScreen.classList.remove('hidden');
+    document.getElementById('shop-screen').classList.remove('hidden');
     renderShop();
 }
 
 function showStageConfirm(level) {
     if (level > maxUnlockedLevel) return;
     selectedLevelForConfirm = level;
-    const confirmScreen = document.getElementById('stage-confirm-screen');
-    if(confirmScreen) confirmScreen.classList.remove('hidden');
-    const confirmLevel = document.getElementById('confirm-level');
-    if(confirmLevel) confirmLevel.innerText = `LEVEL ${level}`;
-    
+    document.getElementById('stage-confirm-screen').classList.remove('hidden');
+    document.getElementById('confirm-level').innerText = `LEVEL ${level}`;
     let baseSpawnRate = 90 / Math.pow(1.5, level - 1);
     let estEnemies = Math.floor(1500 / Math.max(10, baseSpawnRate)); 
-    const confirmEnemy = document.getElementById('confirm-enemy-count');
-    if(confirmEnemy) confirmEnemy.innerText = `ENEMY SIGNAL: ${estEnemies} DETECTED`;
+    document.getElementById('confirm-enemy-count').innerText = `ENEMY SIGNAL: ${estEnemies} DETECTED`;
 }
 
-function closeConfirm() { 
-    const el = document.getElementById('stage-confirm-screen');
-    if(el) el.classList.add('hidden'); 
-}
+function closeConfirm() { document.getElementById('stage-confirm-screen').classList.add('hidden'); }
 function startConfirmedGame() { closeConfirm(); startGame(selectedLevelForConfirm); }
 function openTitleFromPause() { 
     appState = 'title'; 
     hideAllScreens(); 
-    const titleScreen = document.getElementById('title-screen');
-    if(titleScreen) titleScreen.classList.remove('hidden');
+    document.getElementById('title-screen').classList.remove('hidden');
     totalScrap += collectedScrapInRun; 
     saveGameData();
-    const titleScrap = document.getElementById('title-scrap');
-    if(titleScrap) titleScrap.innerText = `SCRAP: ${Math.floor(totalScrap)}`;
+    document.getElementById('title-scrap').innerText = `SCRAP: ${Math.floor(totalScrap)}`;
     renderStageGrid(); 
 }
 
 function togglePause() {
     if (appState === 'playing') {
         appState = 'paused';
-        const pauseScreen = document.getElementById('pause-screen');
-        if(pauseScreen) pauseScreen.classList.remove('hidden');
+        document.getElementById('pause-screen').classList.remove('hidden');
     } else if (appState === 'paused') {
         appState = 'playing';
-        const pauseScreen = document.getElementById('pause-screen');
-        if(pauseScreen) pauseScreen.classList.add('hidden');
+        document.getElementById('pause-screen').classList.add('hidden');
     }
 }
 
@@ -262,13 +243,12 @@ function startGame(level) {
     currentDistance = 0;
     bossSpawned = false; bossObj = null;
     
-    const berserkBtn = document.getElementById('berserk-btn');
-    if (berserkBtn) {
-        if (playerUnlocks.berserkTrigger) {
-            berserkBtn.style.display = 'flex';
-        } else {
-            berserkBtn.style.display = 'none';
-        }
+    if (playerUnlocks.berserkTrigger) {
+        let btn = document.getElementById('berserk-btn');
+        if(btn) btn.style.display = 'flex';
+    } else {
+        let btn = document.getElementById('berserk-btn');
+        if(btn) btn.style.display = 'none';
     }
 
     updatePlayingUI();
@@ -291,8 +271,7 @@ function renderStageGrid() {
 }
 
 function renderShop() {
-    const shopScrap = document.getElementById('shop-scrap');
-    if(shopScrap) shopScrap.innerText = `SCRAP: ${Math.floor(totalScrap)}`;
+    document.getElementById('shop-scrap').innerText = `SCRAP: ${Math.floor(totalScrap)}`;
     const list = document.getElementById('shop-items');
     if (!list) return;
     list.innerHTML = '';
@@ -377,12 +356,9 @@ function triggerStageClear() {
     collectedScrapInRun += scoreBonus;
     saveGameData(); 
     hideAllScreens();
-    const clearScreen = document.getElementById('clear-screen');
-    if(clearScreen) clearScreen.classList.remove('hidden');
-    const clearStats = document.getElementById('clear-stats');
-    if(clearStats) clearStats.innerText = `LEVEL ${currentLevel} CLEARED / SCORE: ${score}`;
-    const clearScrap = document.getElementById('clear-scrap');
-    if(clearScrap) clearScrap.innerText = `OBTAINED SCRAP: +${Math.floor(collectedScrapInRun)} (incl. Score Bonus: ${scoreBonus})`;
+    document.getElementById('clear-screen').classList.remove('hidden');
+    document.getElementById('clear-stats').innerText = `LEVEL ${currentLevel} CLEARED / SCORE: ${score}`;
+    document.getElementById('clear-scrap').innerText = `OBTAINED SCRAP: +${Math.floor(collectedScrapInRun)} (incl. Score Bonus: ${scoreBonus})`;
 }
 
 function triggerGameOver() {
@@ -410,70 +386,53 @@ function triggerGameOver() {
     totalScrap += collectedScrapInRun;
     saveGameData(); 
     hideAllScreens();
-    const goScreen = document.getElementById('gameover-screen');
-    if(goScreen) goScreen.classList.remove('hidden');
-    const goScrap = document.getElementById('gameover-scrap');
-    if(goScrap) goScrap.innerText = `OBTAINED SCRAP: +${Math.floor(collectedScrapInRun)}`;
+    document.getElementById('gameover-screen').classList.remove('hidden');
+    document.getElementById('gameover-scrap').innerText = `OBTAINED SCRAP: +${Math.floor(collectedScrapInRun)}`;
 }
 
 function updatePlayingUI() {
     let hpEl = document.getElementById('hpDisplay');
-    if(hpEl) {
-        let currentHp = player ? Math.max(0, player.hp) : 0;
-        let maxHp = player ? player.maxHp : 3;
-        hpEl.innerText = `HP: ${'♥'.repeat(currentHp)}${'♡'.repeat(Math.max(0, maxHp - currentHp))}`;
-        
-        if (currentHp <= 1 && currentHp > 0) hpEl.style.color = (frameCount % 10 < 5) ? "#f00" : "#800";
-        else hpEl.style.color = currentHp <= 0 ? "#300" : "#f05";
-    }
+    let currentHp = player ? Math.max(0, player.hp) : 0;
+    let maxHp = player ? player.maxHp : 3;
+    hpEl.innerText = `HP: ${'♥'.repeat(currentHp)}${'♡'.repeat(Math.max(0, maxHp - currentHp))}`;
     
-    let scoreEl = document.getElementById('scoreDisplay');
-    if(scoreEl) scoreEl.innerText = `SCORE: ${score}`;
-    let scrapEl = document.getElementById('playScrapDisplay');
-    if(scrapEl) scrapEl.innerText = `SCRAP: ${Math.floor(collectedScrapInRun)}`;
+    if (currentHp <= 1 && currentHp > 0) hpEl.style.color = (frameCount % 10 < 5) ? "#f00" : "#800";
+    else hpEl.style.color = currentHp <= 0 ? "#300" : "#f05";
     
-    let bombEl = document.getElementById('bombDisplay');
-    if(bombEl) {
-        let bombCount = player ? player.bombs : 0;
-        bombEl.innerText = `BOMB: ${'💣'.repeat(bombCount)}`;
-    }
+    document.getElementById('scoreDisplay').innerText = `SCORE: ${score}`;
+    document.getElementById('playScrapDisplay').innerText = `SCRAP: ${Math.floor(collectedScrapInRun)}`;
     
+    let bombCount = player ? player.bombs : 0;
+    document.getElementById('bombDisplay').innerText = `BOMB: ${'💣'.repeat(bombCount)}`;
+    
+    let pLvl = player ? player.powerLevel : 0;
     let powEl = document.getElementById('powerDisplay');
-    if(powEl) {
-        let pLvl = player ? player.powerLevel : 0;
-        powEl.innerText = `POWER: Lv.${pLvl}`;
-        powEl.style.color = pLvl === 2 ? "#d0f" : (pLvl === 1 ? "#f0f" : "#888");
-    }
+    powEl.innerText = `POWER: Lv.${pLvl}`;
+    powEl.style.color = pLvl === 2 ? "#d0f" : (pLvl === 1 ? "#f0f" : "#888");
     
+    let erosion = player ? player.erosion : 0;
+    let isBerserk = player ? player.isBerserk : false;
     let mentalBar = document.getElementById('mentalGaugeBar');
-    if(mentalBar) {
-        let erosion = player ? player.erosion : 0;
-        let isBerserk = player ? player.isBerserk : false;
-        mentalBar.style.width = `${erosion}%`;
-        if (isBerserk) mentalBar.style.backgroundColor = (frameCount % 4 < 2) ? "#f00" : "#fff"; 
-        else mentalBar.style.backgroundColor = "#d0f";
-    }
+    mentalBar.style.width = `${erosion}%`;
+    if (isBerserk) mentalBar.style.backgroundColor = (frameCount % 4 < 2) ? "#f00" : "#fff"; 
+    else mentalBar.style.backgroundColor = "#d0f";
 
     let slowDisp = document.getElementById('slowDisplay');
-    if(slowDisp) {
-        if (gameSpeed < 1.0) {
-            slowDisp.style.display = 'block';
-            if(body) body.classList.add('slow-active');
-        } else {
-            slowDisp.style.display = 'none';
-            if(body) body.classList.remove('slow-active');
-        }
+    if (gameSpeed < 1.0) {
+        slowDisp.style.display = 'block';
+        if(body) body.classList.add('slow-active');
+    } else {
+        slowDisp.style.display = 'none';
+        if(body) body.classList.remove('slow-active');
     }
 }
 
 function checkCollision(obj1, obj2, margin = 0) {
-    if(!obj1 || !obj2) return false;
     let dx = obj1.x - obj2.x; let dy = obj1.y - obj2.y;
     return Math.sqrt(dx*dx + dy*dy) < (obj1.radius + obj2.radius + margin);
 }
 
 function checkDistance(obj1, obj2) {
-    if(!obj1 || !obj2) return 99999;
     let dx = obj1.x - obj2.x; let dy = obj1.y - obj2.y;
     return Math.sqrt(dx*dx + dy*dy);
 }
@@ -557,7 +516,7 @@ function updateGame() {
                 enemy.hp -= dmg;
                 if (enemy.hp <= 0) {
                     enemy.markedForDeletion = true; enemy.dropScrap();
-                    // ★ FIX: e.x -> enemy.x
+                    // ★ FIX: e.x -> enemy.x (ここです！)
                     if (playerUnlocks.autoScavenger && player.minions.length < 2 && enemy.type !== 'boss' && enemy.type !== 'carrier') player.minions.push(new Minion(enemy.x, enemy.y));
                     if (currentLevel >= 5 && Math.random() < 0.3 && enemy.type !== 'boss' && enemy.type !== 'carrier') { let angle = Math.atan2(player.y - enemy.y, player.x - enemy.x); enemyBullets.push(new EnemyBullet(enemy.x, enemy.y, Math.cos(angle)*3, Math.sin(angle)*3)); }
                     if (enemy.type === 'boss') { for(let i=0; i<10; i++) explosions.push(new Explosion(enemy.x + (Math.random()-0.5)*80, enemy.y + (Math.random()-0.5)*80, true)); score += 50000; setTimeout(triggerStageClear, 3000); } 
@@ -585,7 +544,7 @@ function updateGame() {
         }
     });
 
-    // Enemy Bullets Collision (Robust Check)
+    // Enemy Bullets Collision
     enemyBullets.forEach(eb => {
         if (!eb.markedForDeletion) {
             let dist = checkDistance(eb, player);
@@ -604,7 +563,7 @@ function updateGame() {
         }
     });
 
-    // Enemy Body Collision (Robust Check)
+    // Enemy Body Collision (Body Slam)
     enemies.forEach(enemy => {
         if (!enemy.markedForDeletion) {
             let isAttacking = player.isBerserk || player.isBombing;
@@ -677,4 +636,4 @@ function drawGame(ctx) {
 
 // Global Start
 window.addEventListener('resize', resizeCanvas);
-// window.addEventListener('load', initGame) is in window.onload
+window.addEventListener('load', initGame);
