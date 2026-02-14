@@ -245,6 +245,22 @@
             width: 80%;
             max-width: 400px;
         }
+        
+        /* 汚染警告 */
+        #pollution-warning {
+            position: absolute;
+            top: 10%;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: #f05;
+            font-size: 24px;
+            font-weight: bold;
+            display: none;
+            pointer-events: none;
+            text-shadow: 0 0 5px #000;
+            z-index: 20;
+        }
 
         /* 発狂モード演出用 */
         @keyframes glitch-anim {
@@ -275,6 +291,7 @@
     
     <!-- プレイ中UI -->
     <div id="ui-layer">
+        <div id="pollution-warning">WARNING: AREA POLLUTION</div>
         <div class="ui-top-row">
             <div class="ui-left">
                 <div id="hpDisplay" style="font-size: 20px; font-weight: bold; color: #f05;">HP: ♥♥♥</div>
@@ -310,7 +327,7 @@
         <div class="instructions" style="position:relative; bottom:0; margin-top:20px;">
             [スマホ] ドラッグ:移動&連射 | 指離す:ホーミング | 2本指タップ:ボム<br>
             [PC] 移動:矢印 | 弾/ロック:Z | ボム:X<br>
-            ★上部へ移動するとアイテム自動回収(PoC)
+            ★上部(15%)エリアは汚染区域。長居するとHP減少！
         </div>
     </div>
 
@@ -538,6 +555,7 @@ class Player {
         this.berserkTimer = 0;
         
         this.minions = [];
+        this.pollutionTimer = 0; // 上部滞在ペナルティ用
     }
 
     triggerBomb() {
@@ -664,6 +682,20 @@ class Player {
 
         this.updateBerserk();
         this.updateBomb();
+        
+        // 上部汚染エリア判定
+        let warningEl = document.getElementById('pollution-warning');
+        if (this.y < canvas.height * 0.15) { // 上部15%
+            this.pollutionTimer++;
+            warningEl.style.display = 'block';
+            if (this.pollutionTimer > 60 && this.pollutionTimer % 10 === 0) { // 1秒後からダメージ
+                this.hp = Math.max(1, this.hp - 1); // 死にはしない
+                // 画面シェイクなどを入れてもいい
+            }
+        } else {
+            this.pollutionTimer = 0;
+            warningEl.style.display = 'none';
+        }
         
         this.minions = this.minions.filter(m => !m.markedForDeletion);
         this.minions.forEach((m, idx) => m.update(idx)); 
@@ -801,16 +833,17 @@ class Player {
         this.minions.forEach(m => m.draw(ctx));
 
         if (keys['ShiftLeft'] || keys['ShiftRight']) {
-             // PCでのみシフトキーでロック範囲を表示
-             // スマホではドラッグ中(isCharging)に表示
+            if (this.isCharging) {
+                ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
+                ctx.beginPath(); ctx.arc(this.x, this.y - 150, this.lockOnRadius, 0, Math.PI * 2); ctx.stroke();
+            }
         }
         
-        // 修正: スマホでもチャージ中(ドラッグ中)はロック範囲を表示
+        // スマホでもチャージ中(ドラッグ中)はロック範囲を表示
         if (this.isCharging) {
             ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
             ctx.beginPath(); ctx.arc(this.x, this.y - 150, this.lockOnRadius, 0, Math.PI * 2); ctx.stroke();
         }
-
 
         if (this.chargeAmount >= this.chargeMax) {
             ctx.strokeStyle = this.isBerserk ? "rgba(255, 0, 0, 0.5)" : "rgba(0, 255, 0, 0.5)"; ctx.lineWidth = 2;
@@ -1592,7 +1625,23 @@ function updateGame() {
             else if (rand < 0.75) type = 'sprinkler'; 
             else if (rand < 0.95) type = 'sniper'; 
             else type = 'carrier'; 
-            enemies.push(new Enemy(Math.random() * (canvas.width - 40) + 20, -20, type, currentLevel));
+            
+            // 左右からの出現パターンを追加
+            let spawnX, spawnY;
+            if (Math.random() < 0.8) { // 80%は上から
+                spawnX = Math.random() * (canvas.width - 40) + 20;
+                spawnY = -20;
+            } else { // 20%は横から
+                spawnX = Math.random() < 0.5 ? -20 : canvas.width + 20;
+                spawnY = Math.random() * (canvas.height * 0.5); // 上半分から出現
+            }
+            
+            // 横から出るならRusherかSprinklerにする
+            if (spawnY > 0 && type !== 'rusher' && type !== 'sprinkler') {
+                type = Math.random() < 0.5 ? 'rusher' : 'sprinkler';
+            }
+
+            enemies.push(new Enemy(spawnX, spawnY, type, currentLevel));
         }
         if (frameCount % (finalSpawnRate * 8) === 0) {
             enemies.push(new Enemy(canvas.width / 2, -30, 'big', currentLevel));
@@ -1643,6 +1692,13 @@ function updateGame() {
                     if (playerUnlocks.autoScavenger && player.minions.length < 2 && enemy.type !== 'boss' && enemy.type !== 'carrier') {
                             player.minions.push(new Minion(enemy.x, enemy.y));
                     }
+                    
+                    // Lv5以降: 撃ち返し弾 (REVENGE BULLET)
+                    if (currentLevel >= 5 && Math.random() < 0.3 && enemy.type !== 'boss' && enemy.type !== 'carrier') {
+                        let angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+                        enemyBullets.push(new EnemyBullet(enemy.x, enemy.y, Math.cos(angle)*3, Math.sin(angle)*3));
+                    }
+
                     if (enemy.type === 'boss') {
                         for(let i=0; i<10; i++) explosions.push(new Explosion(enemy.x + (Math.random()-0.5)*80, enemy.y + (Math.random()-0.5)*80, true));
                         score += 50000;
