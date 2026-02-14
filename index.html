@@ -669,7 +669,6 @@ class Player {
         this.minions.forEach((m, idx) => m.update(idx)); 
 
         let isShootingInput = keys['KeyZ'] || isTouching;
-        // 修正: 1本指タッチ(isTouching)でもチャージ入力を有効にする
         let isChargingInput = keys['KeyZ'] || isTouching;
 
         if (isShootingInput) {
@@ -725,7 +724,6 @@ class Player {
             }
         }
 
-        // 修正: 2本指判定(isTwoFinger)ではなく、2本指タッチのイベントで直接リリース処理を行うため、ここでは isTouching のみで判定
         if (!keys['KeyZ'] && this.isCharging && !isTouching) this.releaseCharge();
         
         if (this.shotTimer > 0) this.shotTimer--;
