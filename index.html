@@ -249,7 +249,7 @@
         /* 汚染警告 */
         #pollution-warning {
             position: absolute;
-            top: 10%;
+            top: 20%; /* 少し下げて見やすく */
             left: 0;
             width: 100%;
             text-align: center;
@@ -260,6 +260,7 @@
             pointer-events: none;
             text-shadow: 0 0 5px #000;
             z-index: 20;
+            background: rgba(255, 0, 0, 0.1); /* 危険地帯であることを可視化 */
         }
 
         /* 発狂モード演出用 */
@@ -327,7 +328,7 @@
         <div class="instructions" style="position:relative; bottom:0; margin-top:20px;">
             [スマホ] ドラッグ:移動&連射 | 指離す:ホーミング | 2本指タップ:ボム<br>
             [PC] 移動:矢印 | 弾/ロック:Z | ボム:X<br>
-            ★上部(15%)エリアは汚染区域。長居するとHP減少！
+            ★上部(30%)エリアは汚染区域。長居するとHP減少！
         </div>
     </div>
 
@@ -683,9 +684,9 @@ class Player {
         this.updateBerserk();
         this.updateBomb();
         
-        // 上部汚染エリア判定
+        // 上部汚染エリア判定 (0.3 = 30%)
         let warningEl = document.getElementById('pollution-warning');
-        if (this.y < canvas.height * 0.15) { // 上部15%
+        if (this.y < canvas.height * 0.30) { // 上部30%まで拡大
             this.pollutionTimer++;
             warningEl.style.display = 'block';
             if (this.pollutionTimer > 60 && this.pollutionTimer % 10 === 0) { // 1秒後からダメージ
@@ -761,6 +762,7 @@ class Player {
         if (this.shotTimer > 0) this.shotTimer--;
         if (this.invincibleTimer > 0) this.invincibleTimer--;
         
+        // アイテム吸引 (PoC)
         let isPoC = this.y < canvas.height * 0.25; 
         
         [...scraps, ...powerItems].forEach(item => {
