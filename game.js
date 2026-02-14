@@ -523,13 +523,39 @@ window.onload = function() {
     setBtn('tab-module', () => switchShopTab('module'));
     
     // Touch Events on Canvas
+    // Canvasの位置情報を取得して座標を補正する関数
+    function getCanvasRelativeCoords(e) {
+        const rect = canvas.getBoundingClientRect();
+        // タッチイベントかマウスイベントかで座標取得方法を分岐
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
+        };
+    }
+
+    // タッチ座標同期用関数（補正付き）
+    function syncTouchPosition(e) {
+        if (e.touches && e.touches.length > 0) {
+            const coords = getCanvasRelativeCoords(e);
+            lastTouchX = coords.x;
+            lastTouchY = coords.y;
+        }
+    }
+
     canvas.addEventListener('touchstart', e => {
         if(appState !== 'playing') return;
         e.preventDefault();
+        
         syncTouchPosition(e);
+
         if (e.touches.length === 1) {
             isTouching = true; 
-            touchStartX = lastTouchX; touchStartY = lastTouchY; touchStartTime = Date.now();
+            const coords = getCanvasRelativeCoords(e);
+            touchStartX = coords.x; 
+            touchStartY = coords.y; 
+            touchStartTime = Date.now();
         } else if (e.touches.length === 2) {
             // 2本指タップでボム
             player.triggerBomb();
@@ -539,14 +565,23 @@ window.onload = function() {
     canvas.addEventListener('touchmove', e => {
         if(appState !== 'playing') return;
         e.preventDefault();
+        
         if (e.touches.length === 0) return;
-        let cx = e.touches[0].clientX;
-        let cy = e.touches[0].clientY;
+
+        const coords = getCanvasRelativeCoords(e);
+        let cx = coords.x;
+        let cy = coords.y;
+        
         let dist = Math.hypot(cx - lastTouchX, cy - lastTouchY);
         if (dist < 100) { 
             player.x += (cx - lastTouchX);
             player.y += (cy - lastTouchY);
+            
+            // プレイヤー位置をキャンバス内に制限
+            player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+            player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
         }
+        
         lastTouchX = cx;
         lastTouchY = cy;
     }, { passive: false });
@@ -554,11 +589,16 @@ window.onload = function() {
     canvas.addEventListener('touchend', e => {
         if(appState !== 'playing') return;
         e.preventDefault();
+        
         syncTouchPosition(e);
+
         if (e.touches.length === 0) {
-             if (isTouching) player.releaseCharge();
+             if (isTouching) { 
+                 player.releaseCharge();
+             }
              isTouching = false;
         }
+
     }, { passive: false });
 
     resizeCanvas();
@@ -594,8 +634,21 @@ function resetSaveData() {
 
 function resizeCanvas() {
     if(canvas) {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        // ウィンドウのアスペクト比を計算
+        const windowRatio = window.innerWidth / window.innerHeight;
+        const targetRatio = 9 / 16; // ターゲットのアスペクト比 (スマホ縦画面想定)
+
+        if (windowRatio > targetRatio) {
+            // ウィンドウが横長の場合（PCなど）
+            canvas.height = window.innerHeight;
+            canvas.width = canvas.height * targetRatio;
+        } else {
+            // ウィンドウが縦長の場合（スマホなど）
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        // キャンバスサイズに合わせてプレイヤー位置を調整
         if(player && player.y > canvas.height) player.y = canvas.height - 100;
     }
 }
@@ -703,6 +756,7 @@ function triggerStageClear() {
 
 function triggerGameOver() {
     appState = 'gameover';
+    
     if (playerUnlocks.midasCurse && !player.usedMidas) {
         if (totalScrap >= 100) { 
              if(confirm("黄金の呪いが発動しますか？ (所持金の半分を消費して復活)")) {
@@ -718,6 +772,7 @@ function triggerGameOver() {
              }
         }
     }
+
     totalScrap += collectedScrapInRun;
     saveGameData(); 
     hideAllScreens();
@@ -1163,70 +1218,3 @@ function drawGame(ctx) {
         ctx.textAlign = "left";
     }
 }
-
-// 6. Event Listeners
-window.addEventListener('resize', resizeCanvas);
-
-window.addEventListener('keydown', e => {
-    if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) e.preventDefault();
-    keys[e.code] = true;
-});
-window.addEventListener('keyup', e => keys[e.code] = false);
-
-// タッチ座標同期用関数
-function syncTouchPosition(e) {
-    if (e.touches.length > 0) {
-        lastTouchX = e.touches[0].clientX;
-        lastTouchY = e.touches[0].clientY;
-    }
-}
-
-// タッチ入力リスナー
-canvas.addEventListener('touchstart', e => {
-    if(appState !== 'playing') return;
-    e.preventDefault();
-    
-    syncTouchPosition(e);
-
-    if (e.touches.length === 1) {
-        isTouching = true; 
-        touchStartX = lastTouchX; touchStartY = lastTouchY; touchStartTime = Date.now();
-    } else if (e.touches.length === 2) {
-        // 2本指タップでボム
-        player.triggerBomb();
-    }
-}, { passive: false });
-
-canvas.addEventListener('touchmove', e => {
-    if(appState !== 'playing') return;
-    e.preventDefault();
-    
-    if (e.touches.length === 0) return;
-
-    let cx = e.touches[0].clientX;
-    let cy = e.touches[0].clientY;
-    
-    let dist = Math.hypot(cx - lastTouchX, cy - lastTouchY);
-    if (dist < 100) { 
-        player.x += (cx - lastTouchX);
-        player.y += (cy - lastTouchY);
-    }
-    
-    lastTouchX = cx;
-    lastTouchY = cy;
-}, { passive: false });
-
-canvas.addEventListener('touchend', e => {
-    if(appState !== 'playing') return;
-    e.preventDefault();
-    
-    syncTouchPosition(e);
-
-    if (e.touches.length === 0) {
-         if (isTouching) { 
-             player.releaseCharge();
-         }
-         isTouching = false;
-    }
-
-}, { passive: false });
