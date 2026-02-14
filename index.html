@@ -800,12 +800,17 @@ class Player {
 
         this.minions.forEach(m => m.draw(ctx));
 
-        if (keys['ShiftLeft'] || keys['ShiftRight'] || isTwoFinger) {
-            if (this.isCharging) {
-                ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
-                ctx.beginPath(); ctx.arc(this.x, this.y - 150, this.lockOnRadius, 0, Math.PI * 2); ctx.stroke();
-            }
+        if (keys['ShiftLeft'] || keys['ShiftRight']) {
+             // PCでのみシフトキーでロック範囲を表示
+             // スマホではドラッグ中(isCharging)に表示
         }
+        
+        // 修正: スマホでもチャージ中(ドラッグ中)はロック範囲を表示
+        if (this.isCharging) {
+            ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
+            ctx.beginPath(); ctx.arc(this.x, this.y - 150, this.lockOnRadius, 0, Math.PI * 2); ctx.stroke();
+        }
+
 
         if (this.chargeAmount >= this.chargeMax) {
             ctx.strokeStyle = this.isBerserk ? "rgba(255, 0, 0, 0.5)" : "rgba(0, 255, 0, 0.5)"; ctx.lineWidth = 2;
@@ -1816,7 +1821,7 @@ canvas.addEventListener('touchstart', e => {
     syncTouchPosition(e);
 
     if (e.touches.length === 1) {
-        isTouching = true; isTwoFinger = false;
+        isTouching = true; 
         touchStartX = lastTouchX; touchStartY = lastTouchY; touchStartTime = Date.now();
     } else if (e.touches.length === 2) {
         // 2本指タップでボム
@@ -1859,7 +1864,6 @@ canvas.addEventListener('touchend', e => {
          }
          isTouching = false;
     }
-    if (e.touches.length < 2) isTwoFinger = false; 
 
 }, { passive: false });
 
