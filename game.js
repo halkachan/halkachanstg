@@ -217,9 +217,11 @@ function startGame(level) {
     hideAllScreens();
     if(uiLayer) uiLayer.style.display = 'block';
     
+    // Player Re-initialization
     if (!player) player = new Player();
     player.hp = playerStats.maxHp;
     
+    // Force Position Reset
     if(canvas) {
         player.x = canvas.width / 2;
         player.y = canvas.height - 100;
@@ -264,7 +266,6 @@ function renderStageGrid() {
         btn.innerText = i;
         if(i <= maxUnlockedLevel) {
             btn.onclick = function() { showStageConfirm(i); };
-            btn.ontouchend = function(e) { e.preventDefault(); showStageConfirm(i); };
         }
         grid.appendChild(btn);
     }
@@ -317,7 +318,6 @@ function renderShop() {
         if ((totalScrap < cost && !buttonDisabled) || buttonDisabled) btn.disabled = true;
         
         btn.onclick = function() { buyUpgrade(key); };
-        btn.ontouchend = function(e) { e.preventDefault(); buyUpgrade(key); };
         div.appendChild(btn);
         list.appendChild(div);
     }
@@ -566,6 +566,7 @@ function updateGame() {
                     enemy.hp -= damage; grazeSparks.push(new GrazeSpark((player.x+enemy.x)/2, (player.y+enemy.y)/2));
                     if (enemy.hp <= 0) {
                         enemy.markedForDeletion = true; enemy.dropScrap();
+                        // 修正済み: e.x -> enemy.x
                         if (playerUnlocks.autoScavenger && player.minions.length < 2 && enemy.type !== 'boss' && enemy.type !== 'carrier') player.minions.push(new Minion(enemy.x, enemy.y));
                         if (enemy.type === 'boss') { for(let i=0; i<10; i++) explosions.push(new Explosion(enemy.x + (Math.random()-0.5)*80, enemy.y + (Math.random()-0.5)*80, true)); score += 50000; setTimeout(triggerStageClear, 3000); } 
                         else { explosions.push(new Explosion(enemy.x, enemy.y, true)); }
