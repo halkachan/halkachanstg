@@ -550,8 +550,9 @@ function updateGame() {
                 if (checkCollision(eb, {x: player.x, y: player.y + 5, radius: player.radius})) {
                     if (playerUnlocks.deadManSwitch && player.bombs > 0) { player.triggerBomb(); }
                     else {
-                        player.hp--; player.invincibleTimer = 60; score = Math.max(0, score - 500); player.powerLevel = Math.max(0, player.powerLevel - 1); 
-                        eb.markedForDeletion = true; currentHits = 0; if (player.hp <= 0) triggerGameOver();
+                        player.hp--; player.invincibleTimer = 60; score = Math.max(0, score - 500); currentHits = 0; player.powerLevel = Math.max(0, player.powerLevel - 1); 
+                        if (enemy.type !== 'boss') { enemy.hp -= 5 * playerStats.baseDamage; if (enemy.hp <= 0) { enemy.markedForDeletion = true; enemy.dropScrap(); explosions.push(new Explosion(enemy.x, enemy.y, false)); } }
+                        if (player.hp <= 0) triggerGameOver();
                     }
                 }
             }
@@ -566,8 +567,10 @@ function updateGame() {
                     enemy.hp -= damage; grazeSparks.push(new GrazeSpark((player.x+enemy.x)/2, (player.y+enemy.y)/2));
                     if (enemy.hp <= 0) {
                         enemy.markedForDeletion = true; enemy.dropScrap();
-                        // 修正済み: e.x -> enemy.x
-                        if (playerUnlocks.autoScavenger && player.minions.length < 2 && enemy.type !== 'boss' && enemy.type !== 'carrier') player.minions.push(new Minion(enemy.x, enemy.y));
+                        // 修正: 変数eの誤用を修正 (enemyを使用)
+                        if (playerUnlocks.autoScavenger && player.minions.length < 2 && enemy.type !== 'boss' && enemy.type !== 'carrier') {
+                            player.minions.push(new Minion(enemy.x, enemy.y));
+                        }
                         if (enemy.type === 'boss') { for(let i=0; i<10; i++) explosions.push(new Explosion(enemy.x + (Math.random()-0.5)*80, enemy.y + (Math.random()-0.5)*80, true)); score += 50000; setTimeout(triggerStageClear, 3000); } 
                         else { explosions.push(new Explosion(enemy.x, enemy.y, true)); }
                         addHitScore();
@@ -626,4 +629,4 @@ function drawGame(ctx) {
 
 // Global Start
 window.addEventListener('resize', resizeCanvas);
-// window.addEventListener('load', initGame) is in window.onload
+window.addEventListener('load', initGame);
