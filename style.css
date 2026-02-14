@@ -18,11 +18,11 @@ html, body {
 }
 
 #game-container {
-    position: relative; /* 子要素(UI)の基準点になる */
+    position: relative;
     width: 100%;
     height: 100%;
-    max-width: 480px; 
-    aspect-ratio: 9 / 16;
+    max-width: 500px; /* 少し幅を許容 */
+    aspect-ratio: 10 / 16; /* 9:16より少し広げて視認性向上 */
     max-height: 100vh; 
     background: #000;
     overflow: hidden;
@@ -46,7 +46,6 @@ canvas {
     pointer-events: none;
     display: none;
     z-index: 10;
-    /* コンテナ内に配置されたので、これで画面内収まる */
 }
 
 .ui-top-row {
@@ -222,15 +221,20 @@ h1 {
     font-weight: bold;
     font-size: 0.9rem;
     pointer-events: auto;
-    transition: 0.2s;
+    transition: background-color 0.2s, color 0.2s;
 }
+/* アクティブ時のみ色をつける */
 .shop-tab.active {
     background: rgba(50, 0, 20, 0.8);
     border-color: #f05;
     color: #fff;
     box-shadow: 0 -2px 10px rgba(255, 0, 80, 0.2);
 }
-/* MODULEタブの個別カラー設定を削除しました */
+/* ホバー効果 */
+.shop-tab:hover:not(.active) {
+    background: #222;
+    color: #888;
+}
 
 #shop-items {
     width: 100%;
